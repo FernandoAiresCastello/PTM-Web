@@ -1,27 +1,34 @@
+import { CanvasPoint } from "./CanvasPoint";
+
 export class Display {
 
     private canvasElement: HTMLCanvasElement;
     private canvas: CanvasRenderingContext2D;
-    private elementWidth: number;
-    private elementHeight: number;
+    private canvasWidth: number;
+    private canvasHeight: number;
     private pixelBufWidth: number;
     private pixelBufHeight: number;
-    private imageData: ImageData;
-    private pixels: number[];
+    private pixelBufSize: number;
+    private pixels: string[];
     private pixelWidth: number;
     private pixelHeight: number;
+    private pixelPositions: CanvasPoint[];
 
-    constructor(parentElement: HTMLElement, width: number, height: number, pixelWidth: number, pixelHeight: number) {
-        this.pixelBufWidth = width;
-        this.pixelBufHeight = height;
-        this.elementWidth = width * pixelWidth;
-        this.elementHeight = height * pixelHeight;
+    constructor(parentElement: HTMLElement, bufWidth: number, bufHeight: number, pixelWidth: number, pixelHeight: number) {
+        
+        (window as any).PTM_Display = this;
+
+        this.pixelBufWidth = bufWidth;
+        this.pixelBufHeight = bufHeight;
+        this.pixelBufSize = bufWidth * bufHeight;
         this.pixelWidth = pixelWidth;
         this.pixelHeight = pixelHeight;
+        this.canvasWidth = bufWidth * pixelWidth;
+        this.canvasHeight = bufHeight * pixelHeight;
 
         this.canvasElement = document.createElement("canvas");
-        this.canvasElement.width = this.elementWidth;
-        this.canvasElement.height = this.elementHeight;
+        this.canvasElement.width = this.canvasWidth;
+        this.canvasElement.height = this.canvasHeight;
         parentElement.append(this.canvasElement);
 
         let ctx = this.canvasElement.getContext("2d");
@@ -31,49 +38,74 @@ export class Display {
         this.canvas = ctx;
         this.canvas.imageSmoothingEnabled = false;
         this.canvas.imageSmoothingQuality = 'low';
-        this.imageData = this.canvas.getImageData(0, 0, this.elementWidth, this.elementHeight);
+        this.pixelPositions = this.calculatePixelPositions();
         this.pixels = [];
-        this.clearPixels(0x000000);
-        this.test();
+        this.clearPixels('#000000');
+        this.update();
     }
 
-    private test() {
-        for (let i = 0; i < 1000; i++) {
-            const x = Math.floor(Math.random() * this.pixelBufWidth);
-            const y = Math.floor(Math.random() * this.pixelBufHeight);
-            this.putPixelRgb(x, y, 0x00ff00);
+    private clearPixels(rgb: string) {
+        for (let pos = 0; pos < this.pixelBufSize; pos++) {
+            this.putPixelRgbLinear(pos, rgb);
+        }
+    }
+
+    private putPixelRgbLinear(pos: number, rgb: string) {
+        this.pixels[pos] = rgb;
+    }
+
+    private putPixelRgb(x: number, y: number, rgb: string) {
+        this.pixels[y * this.pixelBufWidth + x] = rgb;
+    }
+
+    private update() {
+        for (let i = 0; i < this.pixelPositions.length; i++) {
+            const pos = this.pixelPositions[i];
+            this.canvas.fillStyle = this.pixels[pos.index];
+            this.canvas.fillRect(pos.x, pos.y, this.pixelWidth, this.pixelHeight);
+        }
+    }
+    
+    private calculatePixelPositions() : CanvasPoint[] {
+        const positions = [];
+        let canvasX = 0;
+        let canvasY = 0;
+        for (let pixelBufIndex = 0; pixelBufIndex < this.pixelBufSize; pixelBufIndex++) {
+            positions.push(new CanvasPoint(canvasX, canvasY, pixelBufIndex));
+            canvasX += this.pixelWidth;
+            if (canvasX >= this.canvasWidth) {
+                canvasX = 0;
+                canvasY += this.pixelHeight;
+            }
+        }
+        return positions;
+    }
+
+    // === Frame rendering tests ===
+
+    private test1() {
+        this.clearPixels('#ffff00');
+        this.putPixelRgb(0, 0, '#ff0000');
+        for (let x = 0; x < this.pixelBufWidth; x++) {
+            this.putPixelRgb(x, 0, '#ff0000');
+            this.putPixelRgb(x, this.pixelBufHeight - 1, '#ff0000');
+        }
+        for (let y = 0; y < this.pixelBufHeight; y++) {
+            this.putPixelRgb(0, y, '#ff0000');
+            this.putPixelRgb(this.pixelBufWidth - 1, y, '#ff0000');
         }
         this.update();
     }
 
-    private clearPixels(rgb: number) {
-        for (let y = 0; y < this.elementHeight; y++) {
-            for (let x = 0; x < this.elementWidth; x++) {
-                this.putPixelRgb(x, y, rgb);
-            }
+    private test2() {
+        for (let pos = 0; pos < this.pixelBufSize; pos++) {
+            let color = '';
+            const rnd = Math.floor(Math.random() * 3);
+            if (rnd == 0) color = '#ff0000';
+            else if (rnd == 1) color = '#00ff00';
+            else if (rnd == 2) color = '#0000ff';
+            this.putPixelRgbLinear(pos, color);
         }
-    }
-
-    private putPixelRgb(x: number, y: number, rgb: number) {
-        this.pixels[y * this.elementWidth + x] = rgb;
-    }
-
-    update() {
-        for (let y = 0; y < this.elementHeight; y++) {
-            for (let py = 0; py < this.pixelHeight; py++) {
-                const yOffset = (y * this.pixelHeight + py) * this.elementWidth;
-                for (let x = 0; x < this.elementWidth; x++) {
-                    for (let px = 0; px < this.pixelWidth; px++) {
-                        let offset = yOffset + (x * this.pixelWidth + px);
-                        const rgb = this.pixels[y * this.elementWidth + x];
-                        this.imageData.data[offset * 4 + 0] = (rgb >> 16) & 0xff;
-                        this.imageData.data[offset * 4 + 1] = (rgb >> 8) & 0xff;
-                        this.imageData.data[offset * 4 + 2] = rgb & 0xff;
-                        this.imageData.data[offset * 4 + 3] = 0xff;
-                    }
-                }
-            }
-        }
-        this.canvas.putImageData(this.imageData, 0, 0);
+        this.update();
     }
 }
