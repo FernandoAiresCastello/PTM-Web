@@ -9,5 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (displayElement === null) {
         throw new Error("Display element not found");
     }
-    (window as any).PTM = new PTM(displayElement, ptmlElement.textContent);
+    const ptm = new PTM(displayElement, ptmlElement.textContent);
+    (window as any).PTM = ptm;
+    ptm.start();
 });

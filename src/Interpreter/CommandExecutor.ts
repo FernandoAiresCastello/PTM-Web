@@ -1,9 +1,9 @@
-import { Command } from "../Parser/Command";
-import { Param } from "../Parser/Param";
+import { PTM } from "../PTM";
 import { ProgramLine } from "../Parser/ProgramLine";
 import { CommandDictionary } from "./CommandDictionary";
 import { CommandValidator } from "./CommandValidator";
-import { PTM } from "../PTM";
+import { Command } from "../Parser/Command";
+import { Param } from "../Parser/Param";
 
 export class CommandExecutor {
     
@@ -26,7 +26,7 @@ export class CommandExecutor {
     }
 
     execute(programLine: ProgramLine) {
-        const cmd = programLine.cmd;
+        const cmd = programLine.cmd!;
         this.validator.programLine = programLine;
         this.params = programLine.params;
         const impl = this.commandDict[cmd];
@@ -35,21 +35,21 @@ export class CommandExecutor {
 
     private Nop() {
         this.validator.argc(0);
-        console.info("NOP executed");
+        this.ptm.log("NOP executed");
     }
 
     private Halt() {
         this.validator.argc(0);
-        console.info("HALT executed");
+        this.ptm.log("HALT executed");
     }
 
     private Exit() {
         this.validator.argc(0);
-        console.info("EXIT executed");
+        this.ptm.log("EXIT executed");
     }
 
     private Title() {
         this.validator.argc(1);
-        console.info(`TITLE executed with params: ${this.params}`);
+        this.ptm.log(`TITLE executed with params: ${this.params}`);
     }
 }

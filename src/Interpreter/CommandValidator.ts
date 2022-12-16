@@ -5,7 +5,7 @@ export class CommandValidator {
     programLine!: ProgramLine;
 
     private throwError(msg: string) {
-        throw new Error(`${msg}\nSource line: ${this.programLine.line_nr} ${this.programLine.src}`);
+        throw new Error(`${msg}\nSource line: ${this.programLine.lineNr} ${this.programLine.src}`);
     }
 
     argc(expectedArgc: number) {
