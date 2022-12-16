@@ -1,7 +1,9 @@
 export enum Command {
     
     Nop = "NOP",
+    Data = "DATA",
     Halt = "HALT",
-    Exit = "EXIT",
-    Title = "TITLE"
+    Reset = "RESET",
+    Title = "TITLE",
+    Screen = "SCREEN"
 }

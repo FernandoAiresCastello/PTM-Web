@@ -1,19 +1,22 @@
 import { ProgramLineType } from "./ProgramLineType";
 import { Command } from "./Command";
 import { Param } from "./Param";
+import { ExecutionTime } from "./ExecutionTime";
 
 export class ProgramLine {
 
-    type: ProgramLineType;
     src: string;
     lineNr: number;
+    type: ProgramLineType;
+    execTime: ExecutionTime;
     cmd: Command | null;
     params: Param[];
 
     constructor(src: string, lineNr: number) {
-        this.type = ProgramLineType.Undefined;
         this.src = src;
         this.lineNr = lineNr;
+        this.type = ProgramLineType.Undefined;
+        this.execTime = ExecutionTime.Undefined;
         this.cmd = null;
         this.params = [];
     }

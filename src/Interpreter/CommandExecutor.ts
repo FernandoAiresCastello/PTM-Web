@@ -4,52 +4,73 @@ import { CommandDictionary } from "./CommandDictionary";
 import { CommandValidator } from "./CommandValidator";
 import { Command } from "../Parser/Command";
 import { Param } from "../Parser/Param";
+import { Display } from "../Graphics/Display";
+import { InterpreterContext } from "./InterpreterContext";
 
 export class CommandExecutor {
-    
-    private ptm: PTM;
-    private commandDict: CommandDictionary;
-    private validator: CommandValidator;
-    private params: Param[];
+
+    readonly validator: CommandValidator;
+    private readonly ptm: PTM;
+    private readonly commandDict: CommandDictionary;
 
     constructor(ptm: PTM) {
         this.ptm = ptm;
-        this.params = [];
         this.validator = new CommandValidator();
 
         this.commandDict = {
             [Command.Nop]: this.Nop,
+            [Command.Data]: this.Data,
             [Command.Halt]: this.Halt,
-            [Command.Exit]: this.Exit,
+            [Command.Reset]: this.Reset,
             [Command.Title]: this.Title,
+            [Command.Screen]: this.Screen
         };
     }
 
     execute(programLine: ProgramLine) {
-        const cmd = programLine.cmd!;
-        this.validator.programLine = programLine;
-        this.params = programLine.params;
-        const impl = this.commandDict[cmd];
-        impl();
+        const cmd = programLine.cmd;
+        if (cmd) {
+            this.validator.programLine = programLine;
+            const interpreterCtx = { executor: this, validator: this.validator, param: programLine.params };
+            const commandImpl = this.commandDict[cmd];
+            commandImpl(interpreterCtx);
+        }
     }
 
-    private Nop() {
-        this.validator.argc(0);
-        this.ptm.log("NOP executed");
+    private Nop(ctx: InterpreterContext) {
+        ctx.validator.argc(0);
+        console.log("--- NOP executed. Params: " + ctx.param);
     }
 
-    private Halt() {
-        this.validator.argc(0);
-        this.ptm.log("HALT executed");
+    private Data(ctx: InterpreterContext) {
+        console.log("--- DATA executed. Params: " + ctx.param);
     }
 
-    private Exit() {
-        this.validator.argc(0);
-        this.ptm.log("EXIT executed");
+    private Halt(ctx: InterpreterContext) {
+        ctx.validator.argc(0);
+        console.log("--- HALT executed. Params: " + ctx.param);
     }
 
-    private Title() {
-        this.validator.argc(1);
-        this.ptm.log(`TITLE executed with params: ${this.params}`);
+    private Reset(ctx: InterpreterContext) {
+        ctx.validator.argc(0);
+        console.log("--- RESET executed. Params: " + ctx.param);
+    }
+
+    private Title(ctx: InterpreterContext) {
+        ctx.validator.argc(1);
+        console.log("--- TITLE executed. Params: " + ctx.param);
+    }
+
+    private Screen(ctx: InterpreterContext) {
+        ctx.validator.argc(4);
+        console.log("--- SCREEN executed. Params: " + ctx.param);
+
+        const width = ctx.param[0].numeric_value;
+        const height = ctx.param[1].numeric_value;
+        const horizontalStretch = ctx.param[2].numeric_value;
+        const verticalStretch = ctx.param[3].numeric_value;
+
+        ctx.executor.ptm.display = new Display(ctx.executor.ptm.displayElement!, 
+            width, height, horizontalStretch, verticalStretch);
     }
 }
