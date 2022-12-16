@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const System_1 = require("./System");
+const PTM_1 = require("./PTM");
 document.addEventListener("DOMContentLoaded", () => {
     let ptmlElement = document.querySelector('script[type="text/ptml"]');
     if (ptmlElement === null || ptmlElement.textContent === null) {
@@ -10,5 +10,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (displayElement === null) {
         throw new Error("Display element not found");
     }
-    let sys = new System_1.System(displayElement, ptmlElement.textContent);
+    window.PTM = new PTM_1.PTM(displayElement, ptmlElement.textContent);
 });

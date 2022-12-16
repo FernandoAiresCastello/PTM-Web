@@ -18,7 +18,6 @@ exports.Display = void 0;
 const CanvasPoint_1 = require("./CanvasPoint");
 class Display {
     constructor(parentElement, bufWidth, bufHeight, pixelWidth, pixelHeight) {
-        window.PTM_Display = this;
         this.pixelBufWidth = bufWidth;
         this.pixelBufHeight = bufHeight;
         this.pixelBufSize = bufWidth * bufHeight;
@@ -53,6 +52,13 @@ class Display {
     putPixelRgb(x, y, rgb) {
         this.pixels[y * this.pixelBufWidth + x] = rgb;
     }
+    update() {
+        for (let i = 0; i < this.pixelPositions.length; i++) {
+            const pos = this.pixelPositions[i];
+            this.canvas.fillStyle = this.pixels[pos.index];
+            this.canvas.fillRect(pos.x, pos.y, this.pixelWidth, this.pixelHeight);
+        }
+    }
     calculatePixelPositions() {
         const positions = [];
         let canvasX = 0;
@@ -67,14 +73,7 @@ class Display {
         }
         return positions;
     }
-    update() {
-        for (let i = 0; i < this.pixelPositions.length; i++) {
-            const pos = this.pixelPositions[i];
-            this.canvas.fillStyle = this.pixels[pos.index];
-            this.canvas.fillRect(pos.x, pos.y, this.pixelWidth, this.pixelHeight);
-        }
-    }
-    // Tests
+    // === Frame rendering tests ===
     test1() {
         this.clearPixels('#ffff00');
         this.putPixelRgb(0, 0, '#ff0000');
@@ -108,17 +107,74 @@ exports.Display = Display;
 },{"./CanvasPoint":1}],3:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Machine = void 0;
-class Machine {
-    constructor() {
+exports.CommandExecutor = void 0;
+const Command_1 = require("../Parser/Command");
+const CommandValidator_1 = require("./CommandValidator");
+class CommandExecutor {
+    constructor(ptm) {
+        this.ptm = ptm;
+        this.params = [];
+        this.validator = new CommandValidator_1.CommandValidator();
+        this.commandDict = {
+            [Command_1.Command.Nop]: this.Nop,
+            [Command_1.Command.Halt]: this.Halt,
+            [Command_1.Command.Exit]: this.Exit,
+            [Command_1.Command.Title]: this.Title,
+        };
+    }
+    execute(programLine) {
+        const cmd = programLine.cmd;
+        this.validator.programLine = programLine;
+        this.params = programLine.params;
+        const impl = this.commandDict[cmd];
+        impl();
+    }
+    Nop() {
+        this.validator.argc(0);
+        console.info("NOP executed");
+    }
+    Halt() {
+        this.validator.argc(0);
+        console.info("HALT executed");
+    }
+    Exit() {
+        this.validator.argc(0);
+        console.info("EXIT executed");
+    }
+    Title() {
+        this.validator.argc(1);
+        console.info(`TITLE executed with params: ${this.params}`);
     }
 }
-exports.Machine = Machine;
+exports.CommandExecutor = CommandExecutor;
 
-},{}],4:[function(require,module,exports){
+},{"../Parser/Command":7,"./CommandValidator":4}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const System_1 = require("./System");
+exports.CommandValidator = void 0;
+class CommandValidator {
+    throwError(msg) {
+        throw new Error(`${msg}\nSource line: ${this.programLine.line_nr} ${this.programLine.src}`);
+    }
+    argc(expectedArgc) {
+        const actualArgc = this.programLine.params.length;
+        if (actualArgc && actualArgc !== expectedArgc) {
+            this.throwError(`Invalid parameter count. Expected ${expectedArgc}, got ${actualArgc}`);
+        }
+    }
+    argcMinMax(min, max) {
+        const actualArgc = this.programLine.params.length;
+        if (actualArgc < min || actualArgc > max) {
+            this.throwError(`Invalid parameter count. Expected from ${min} to ${max}, got ${actualArgc}`);
+        }
+    }
+}
+exports.CommandValidator = CommandValidator;
+
+},{}],5:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const PTM_1 = require("./PTM");
 document.addEventListener("DOMContentLoaded", () => {
     let ptmlElement = document.querySelector('script[type="text/ptml"]');
     if (ptmlElement === null || ptmlElement.textContent === null) {
@@ -128,22 +184,70 @@ document.addEventListener("DOMContentLoaded", () => {
     if (displayElement === null) {
         throw new Error("Display element not found");
     }
-    let sys = new System_1.System(displayElement, ptmlElement.textContent);
+    window.PTM = new PTM_1.PTM(displayElement, ptmlElement.textContent);
 });
 
-},{"./System":5}],5:[function(require,module,exports){
+},{"./PTM":6}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.System = void 0;
-const Display_1 = require("./Display");
-const Machine_1 = require("./Machine");
-class System {
+exports.PTM = void 0;
+const Parser_1 = require("./Parser/Parser");
+const Display_1 = require("./Graphics/Display");
+const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
+class PTM {
     constructor(displayElement, srcPtml) {
-        this.srcPtml = srcPtml;
-        this.ptm = new Machine_1.Machine();
+        this.parser = new Parser_1.Parser(srcPtml);
+        const program = this.parser.parse();
+        this.cmdExec = new CommandExecutor_1.CommandExecutor(this);
+        program.lines.forEach(line => {
+            this.cmdExec.execute(line);
+        });
         this.display = new Display_1.Display(displayElement, 256, 192, 3, 3);
     }
 }
-exports.System = System;
+exports.PTM = PTM;
 
-},{"./Display":2,"./Machine":3}]},{},[4]);
+},{"./Graphics/Display":2,"./Interpreter/CommandExecutor":3,"./Parser/Parser":8}],7:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Command = void 0;
+var Command;
+(function (Command) {
+    Command["Nop"] = "NOP";
+    Command["Halt"] = "HALT";
+    Command["Exit"] = "EXIT";
+    Command["Title"] = "TITLE";
+})(Command = exports.Command || (exports.Command = {}));
+
+},{}],8:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Parser = void 0;
+const Program_1 = require("./Program");
+class Parser {
+    constructor(srcPtml) {
+        this.srcPtml = srcPtml;
+        this.program = new Program_1.Program();
+    }
+    parse() {
+        // TO DO: parse the this.srcPtml and build the AST into this.program.lines
+        return this.program;
+    }
+}
+exports.Parser = Parser;
+
+},{"./Program":9}],9:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Program = void 0;
+class Program {
+    constructor() {
+        this.lines = [];
+    }
+    addLine(line) {
+        this.lines.push(line);
+    }
+}
+exports.Program = Program;
+
+},{}]},{},[5]);

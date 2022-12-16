@@ -16,8 +16,6 @@ export class Display {
 
     constructor(parentElement: HTMLElement, bufWidth: number, bufHeight: number, pixelWidth: number, pixelHeight: number) {
         
-        (window as any).PTM_Display = this;
-
         this.pixelBufWidth = bufWidth;
         this.pixelBufHeight = bufHeight;
         this.pixelBufSize = bufWidth * bufHeight;
@@ -65,7 +63,7 @@ export class Display {
             this.canvas.fillRect(pos.x, pos.y, this.pixelWidth, this.pixelHeight);
         }
     }
-    
+
     private calculatePixelPositions() : CanvasPoint[] {
         const positions = [];
         let canvasX = 0;

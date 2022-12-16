@@ -4,7 +4,6 @@ exports.Display = void 0;
 const CanvasPoint_1 = require("./CanvasPoint");
 class Display {
     constructor(parentElement, bufWidth, bufHeight, pixelWidth, pixelHeight) {
-        window.PTM_Display = this;
         this.pixelBufWidth = bufWidth;
         this.pixelBufHeight = bufHeight;
         this.pixelBufSize = bufWidth * bufHeight;
@@ -39,6 +38,13 @@ class Display {
     putPixelRgb(x, y, rgb) {
         this.pixels[y * this.pixelBufWidth + x] = rgb;
     }
+    update() {
+        for (let i = 0; i < this.pixelPositions.length; i++) {
+            const pos = this.pixelPositions[i];
+            this.canvas.fillStyle = this.pixels[pos.index];
+            this.canvas.fillRect(pos.x, pos.y, this.pixelWidth, this.pixelHeight);
+        }
+    }
     calculatePixelPositions() {
         const positions = [];
         let canvasX = 0;
@@ -53,14 +59,7 @@ class Display {
         }
         return positions;
     }
-    update() {
-        for (let i = 0; i < this.pixelPositions.length; i++) {
-            const pos = this.pixelPositions[i];
-            this.canvas.fillStyle = this.pixels[pos.index];
-            this.canvas.fillRect(pos.x, pos.y, this.pixelWidth, this.pixelHeight);
-        }
-    }
-    // Tests
+    // === Frame rendering tests ===
     test1() {
         this.clearPixels('#ffff00');
         this.putPixelRgb(0, 0, '#ff0000');

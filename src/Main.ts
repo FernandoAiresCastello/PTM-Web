@@ -1,4 +1,4 @@
-import { System } from "./System";
+import { PTM } from "./PTM";
 
 document.addEventListener("DOMContentLoaded", () => {
     let ptmlElement = document.querySelector('script[type="text/ptml"]');
@@ -9,5 +9,5 @@ document.addEventListener("DOMContentLoaded", () => {
     if (displayElement === null) {
         throw new Error("Display element not found");
     }
-    let sys = new System(displayElement, ptmlElement.textContent);
+    (window as any).PTM = new PTM(displayElement, ptmlElement.textContent);
 });
