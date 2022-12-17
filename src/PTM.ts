@@ -1,27 +1,35 @@
 import { Parser } from "./Parser/Parser";
 import { Program } from "./Parser/Program";
 import { CommandExecutor } from "./Interpreter/CommandExecutor";
-import { Display } from "./Graphics/Display";
-import { MachineRuntime } from "./Runtime/MachineRuntime";
+import { Environment } from "./Runtime/Environment";
+import { CommandValidator } from "./Interpreter/CommandValidator";
+import { PTM_InitializationError } from "./Errors/PTM_InitializationError";
+
+document.addEventListener("DOMContentLoaded", () => {
+    let ptmlElement = document.querySelector('script[type="text/ptml"]');
+    if (ptmlElement === null || ptmlElement.textContent === null) {
+        throw new PTM_InitializationError("PTML script not found");
+    }
+    let displayElement = document.getElementById("display");
+    if (displayElement === null) {
+        throw new PTM_InitializationError("Display element not found");
+    }
+    (window as any).PTM = new PTM(displayElement, ptmlElement.textContent);
+});
 
 export class PTM {
 
-    static readonly InvalidNumber: number = Number.MIN_VALUE;
-
-    display: Display | null;
-    readonly displayElement: HTMLElement | null;
-    readonly machineRuntime: MachineRuntime;
+    readonly env: Environment;
     readonly executor: CommandExecutor;
-
+    readonly validator: CommandValidator;
     private readonly parser: Parser;
     private readonly program: Program;
     
     constructor(displayElement: HTMLElement,  srcPtml: string) {
 
-        this.displayElement = displayElement;
-        this.display = null;
-        this.machineRuntime = new MachineRuntime();
-        this.executor = new CommandExecutor(this);
+        this.env = new Environment(displayElement);
+        this.validator = new CommandValidator();
+        this.executor = new CommandExecutor(this.env, this.validator);
         this.parser = new Parser(this, srcPtml);
         this.program = this.parser.parse();
 

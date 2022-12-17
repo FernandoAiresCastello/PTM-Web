@@ -1,3 +1,4 @@
+import { PTM_InitializationError } from "../Errors/PTM_InitializationError";
 import { CanvasPoint } from "./CanvasPoint";
 
 export class Display {
@@ -31,7 +32,7 @@ export class Display {
 
         let ctx = this.canvasElement.getContext("2d");
         if (ctx === null) {
-            throw new Error("Unable to create CanvasRenderingContext2D");
+            throw new PTM_InitializationError("Unable to create CanvasRenderingContext2D");
         }
         this.canvas = ctx;
         this.canvas.imageSmoothingEnabled = false;

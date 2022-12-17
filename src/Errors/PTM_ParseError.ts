@@ -1,6 +1,6 @@
 import { ProgramLine } from "../Parser/ProgramLine";
 
-export class RuntimeError extends Error {
+export class PTM_ParseError extends Error {
     constructor(msg: string, programLine: ProgramLine) {
         super();
         Object.setPrototypeOf(this, new.target.prototype);

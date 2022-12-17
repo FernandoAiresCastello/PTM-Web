@@ -1,29 +1,29 @@
-import { PTM } from "../PTM";
-import { ProgramLine } from "../Parser/ProgramLine";
-import { CommandDictionary } from "./CommandDictionary";
+import { Environment } from "../Runtime/Environment";
 import { CommandValidator } from "./CommandValidator";
+import { CommandDictionary } from "./CommandDictionary";
+import { ProgramLine } from "../Parser/ProgramLine";
 import { Command } from "../Parser/Command";
-import { Param } from "../Parser/Param";
 import { Display } from "../Graphics/Display";
-import { InterpreterContext } from "./InterpreterContext";
+import { Interpreter } from "./Interpreter";
+import { PTM_RuntimeError } from "../Errors/PTM_RuntimeError";
 
 export class CommandExecutor {
 
-    readonly validator: CommandValidator;
-    private readonly ptm: PTM;
+    private readonly env: Environment;
+    private readonly validator: CommandValidator;
     private readonly commandDict: CommandDictionary;
 
-    constructor(ptm: PTM) {
-        this.ptm = ptm;
-        this.validator = new CommandValidator();
-
+    constructor(env: Environment, validator: CommandValidator) {
+        this.env = env;
+        this.validator = validator;
         this.commandDict = {
-            [Command.Nop]: this.Nop,
-            [Command.Data]: this.Data,
-            [Command.Halt]: this.Halt,
-            [Command.Reset]: this.Reset,
-            [Command.Title]: this.Title,
-            [Command.Screen]: this.Screen
+
+            [Command.NOP]: this.NOP,
+            [Command.DATA]: this.DATA,
+            [Command.HALT]: this.HALT,
+            [Command.RESET]: this.RESET,
+            [Command.TITLE]: this.TITLE,
+            [Command.SCREEN]: this.SCREEN
         };
     }
 
@@ -31,46 +31,41 @@ export class CommandExecutor {
         const cmd = programLine.cmd;
         if (cmd) {
             this.validator.programLine = programLine;
-            const interpreterCtx = { executor: this, validator: this.validator, param: programLine.params };
-            const commandImpl = this.commandDict[cmd];
-            commandImpl(interpreterCtx);
+            const commandFunction = this.commandDict[cmd];
+            commandFunction({ validator: this.validator, param: programLine.params }, this.env);
+        } else {
+            throw new PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
         }
     }
 
-    private Nop(ctx: InterpreterContext) {
-        ctx.validator.argc(0);
-        console.log("--- NOP executed. Params: " + ctx.param);
+    NOP(intp: Interpreter, env: Environment) {
+        intp.validator.argc(0);
     }
 
-    private Data(ctx: InterpreterContext) {
-        console.log("--- DATA executed. Params: " + ctx.param);
+    DATA(intp: Interpreter, env: Environment) {
     }
 
-    private Halt(ctx: InterpreterContext) {
-        ctx.validator.argc(0);
-        console.log("--- HALT executed. Params: " + ctx.param);
+    HALT(intp: Interpreter, env: Environment) {
+        intp.validator.argc(0);
     }
 
-    private Reset(ctx: InterpreterContext) {
-        ctx.validator.argc(0);
-        console.log("--- RESET executed. Params: " + ctx.param);
+    RESET(intp: Interpreter, env: Environment) {
+        intp.validator.argc(0);
     }
 
-    private Title(ctx: InterpreterContext) {
-        ctx.validator.argc(1);
-        console.log("--- TITLE executed. Params: " + ctx.param);
+    TITLE(intp: Interpreter, env: Environment) {
+        intp.validator.argc(1);
     }
 
-    private Screen(ctx: InterpreterContext) {
-        ctx.validator.argc(4);
-        console.log("--- SCREEN executed. Params: " + ctx.param);
+    SCREEN(intp: Interpreter, env: Environment) {
+        intp.validator.argc(4);
 
-        const width = ctx.param[0].numeric_value;
-        const height = ctx.param[1].numeric_value;
-        const horizontalStretch = ctx.param[2].numeric_value;
-        const verticalStretch = ctx.param[3].numeric_value;
+        const width = intp.param[0].numeric_value;
+        const height = intp.param[1].numeric_value;
+        const horizontalStretch = intp.param[2].numeric_value;
+        const verticalStretch = intp.param[3].numeric_value;
 
-        ctx.executor.ptm.display = new Display(ctx.executor.ptm.displayElement!, 
-            width, height, horizontalStretch, verticalStretch);
+        env.display = new Display(
+            env.displayElement, width, height, horizontalStretch, verticalStretch);
     }
 }

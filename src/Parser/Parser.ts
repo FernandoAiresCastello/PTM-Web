@@ -1,4 +1,4 @@
-import { ParseError } from "../Errors/ParseError";
+import { PTM_ParseError } from "../Errors/PTM_ParseError";
 import { PTM } from "../PTM";
 import { Command } from "./Command";
 import { ExecutionTime } from "./ExecutionTime";
@@ -35,10 +35,10 @@ export class Parser {
                 } else if (newPrgLine.execTime === ExecutionTime.CompileTime) {
                     this.ptm.executor.execute(newPrgLine);
                 } else if (newPrgLine.execTime === ExecutionTime.Undefined) {
-                    throw new ParseError("Could not determine execution time for this line", newPrgLine);
+                    throw new PTM_ParseError("Could not determine execution time for this line", newPrgLine);
                 }
             } else if (newPrgLine.type === ProgramLineType.Undefined) {
-                throw new ParseError("Could not determine type of this line", newPrgLine);
+                throw new PTM_ParseError("Could not determine type of this line", newPrgLine);
             } else if (newPrgLine.type === ProgramLineType.Ignore) {
                 // Ignore entire line
             }
@@ -70,10 +70,10 @@ export class Parser {
             cmdName = src;
         }
         cmdName = cmdName.toUpperCase();
-        if (this.ptm.executor.validator.commandExists(cmdName)) {
+        if (this.ptm.validator.commandExists(cmdName)) {
             return cmdName as Command;
         } else {
-            throw new ParseError(`Command not recognized: ${cmdName}`, line);
+            throw new PTM_ParseError(`Command not recognized: ${cmdName}`, line);
         }
     }
 
@@ -118,7 +118,7 @@ export class Parser {
     }
 
     private determineExecutionTime(cmd: Command): ExecutionTime {
-        if (cmd === Command.Data) {
+        if (cmd === Command.DATA) {
             return ExecutionTime.CompileTime;
         } else {
             return ExecutionTime.RunTime;

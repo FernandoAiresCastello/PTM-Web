@@ -1,6 +1,7 @@
 import { Command } from "../Parser/Command"
-import { InterpreterContext } from "./InterpreterContext"
+import { Interpreter } from "./Interpreter"
+import { Environment } from "../Runtime/Environment"
 
 export type CommandDictionary = {
-    [cmd in Command] : (ctx: InterpreterContext) => void;
+    [cmd in Command] : (intp: Interpreter, env: Environment) => void;
 }
