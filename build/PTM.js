@@ -268,6 +268,7 @@ class PTM {
         this.executor = new CommandExecutor_1.CommandExecutor(this, this.env, this.validator);
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
+        console.log(this.program.lines[1].params[0]);
         this.start();
     }
     start() {
@@ -334,19 +335,20 @@ class Param {
         this.numericSign = "";
         this.programLine = programLine;
         this.text = src;
-        this.type = this.determineType(src);
+        this.arrayAccess = null;
+        this.type = this.parseType(src);
         this.text = this.maybeTransformText();
         this.number = this.tryParseNumber();
     }
     toString() {
         if (this.type === ParamType_1.ParamType.NumberLiteral) {
-            return ` ${this.text} (${this.type} | ${this.numericBase} | Sign:${this.numericSign ? this.numericSign : "None"})`;
+            return ` ${this.number} (${this.type} | ${this.numericBase})`;
         }
         else {
             return ` ${this.text} (${this.type})`;
         }
     }
-    determineType(src) {
+    parseType(src) {
         if (src.length === 0) {
             return ParamType_1.ParamType.Empty;
         }
@@ -355,30 +357,59 @@ class Param {
             src = src.substring(1);
         }
         const srcPrefix = src.length > 2 ? src.substring(0, 2).toUpperCase() : "";
-        if (src[0] === "\"" && src[src.length - 1] === "\"") {
+        if (src[0] === Param.StringLitDelimiter && src[src.length - 1] === Param.StringLitDelimiter) {
             return ParamType_1.ParamType.StringLiteral;
         }
-        else if (src[0] === "'" && src[src.length - 1] === "'") {
+        else if (src[0] === Param.CharLitDelimiter && src[src.length - 1] === Param.CharLitDelimiter) {
             return ParamType_1.ParamType.CharLiteral;
         }
-        else if (srcPrefix === "&H") {
+        else if (srcPrefix === Param.HexPrefix) {
             this.numericBase = NumberBase_1.NumberBase.Hexadecimal;
             return ParamType_1.ParamType.NumberLiteral;
         }
-        else if (srcPrefix === "&B") {
+        else if (srcPrefix === Param.BinPrefix) {
             this.numericBase = NumberBase_1.NumberBase.Binary;
             return ParamType_1.ParamType.NumberLiteral;
+        }
+        else if (this.isValidIdentifier(src)) {
+            return ParamType_1.ParamType.Identifier;
         }
         else if (src[0].match(/[0-9]/)) {
             this.numericBase = NumberBase_1.NumberBase.Decimal;
             return ParamType_1.ParamType.NumberLiteral;
         }
         else if (src[0].match(/[a-z]/i)) {
-            return ParamType_1.ParamType.Identifier;
+            const ixLeftBrace = src.indexOf(Param.ArrayLeftBrace);
+            const ixRightBrace = src.indexOf(Param.ArrayRightBrace);
+            if (ixLeftBrace > 0 && ixRightBrace > ixLeftBrace + 1) {
+                const id = src.substring(0, ixLeftBrace);
+                const subscript = src.substring(ixLeftBrace + 1, ixRightBrace);
+                if (this.isValidIdentifier(subscript)) {
+                    this.arrayAccess = {
+                        arrayId: id,
+                        ixLiteral: null,
+                        ixVariable: subscript
+                    };
+                    return ParamType_1.ParamType.ArrayIxVarIdentifier;
+                }
+                else {
+                    const index = Number(subscript.toUpperCase().replace(Param.HexPrefix, "0x").replace(Param.BinPrefix, "0b"));
+                    if (Number.isNaN(index) || index < 0) {
+                        throw new PTM_ParseError_1.PTM_ParseError(`Invalid array subscript: ${subscript}`, this.programLine);
+                    }
+                    this.arrayAccess = {
+                        arrayId: id,
+                        ixLiteral: index,
+                        ixVariable: null
+                    };
+                    return ParamType_1.ParamType.ArrayIxLiteral;
+                }
+            }
         }
-        else {
-            throw new PTM_ParseError_1.PTM_ParseError(`Could not parse parameter type: ${src}`, this.programLine);
-        }
+        throw new PTM_ParseError_1.PTM_ParseError(`Could not parse parameter: ${src}`, this.programLine);
+    }
+    isValidIdentifier(src) {
+        return src.match(/^[$A-Z_][0-9A-Z._$]*$/i) !== null;
     }
     maybeTransformText() {
         if (this.type === ParamType_1.ParamType.StringLiteral) {
@@ -410,11 +441,11 @@ class Param {
         let str = this.text.toUpperCase().replace("-", "").replace("+", "");
         if (this.type === ParamType_1.ParamType.NumberLiteral) {
             if (this.numericBase == NumberBase_1.NumberBase.Hexadecimal) {
-                str = str.replace("&H", "0x");
+                str = str.replace(Param.HexPrefix, "0x");
                 num = Number(str);
             }
             else if (this.numericBase == NumberBase_1.NumberBase.Binary) {
-                str = str.replace("&B", "0b");
+                str = str.replace(Param.BinPrefix, "0b");
                 num = Number(str);
             }
             else {
@@ -434,6 +465,12 @@ class Param {
     }
 }
 exports.Param = Param;
+Param.StringLitDelimiter = "\"";
+Param.CharLitDelimiter = "'";
+Param.HexPrefix = "&H";
+Param.BinPrefix = "&B";
+Param.ArrayLeftBrace = "[";
+Param.ArrayRightBrace = "]";
 
 },{"../Errors/PTM_ParseError":2,"./NumberBase":11,"./ParamType":13}],13:[function(require,module,exports){
 "use strict";

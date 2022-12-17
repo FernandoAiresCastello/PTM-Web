@@ -33,6 +33,8 @@ export class PTM {
         this.parser = new Parser(this, srcPtml);
         this.program = this.parser.parse();
 
+        console.log(this.program.lines[1].params[0]);
+
         this.start();
     }
 
