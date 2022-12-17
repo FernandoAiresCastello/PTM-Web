@@ -151,20 +151,26 @@ exports.Display = Display;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommandExecutor = void 0;
+const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
 const Command_1 = require("../Parser/Command");
 const Display_1 = require("../Graphics/Display");
-const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
 class CommandExecutor {
-    constructor(env, validator) {
+    constructor(ptm, env, validator) {
+        this.ptm = ptm;
         this.env = env;
         this.validator = validator;
-        this.commandDict = {
+        this.commandDict = this.initCommands();
+    }
+    initCommands() {
+        return {
             [Command_1.Command.NOP]: this.NOP,
+            [Command_1.Command.TEST]: this.TEST,
             [Command_1.Command.DATA]: this.DATA,
             [Command_1.Command.HALT]: this.HALT,
             [Command_1.Command.RESET]: this.RESET,
             [Command_1.Command.TITLE]: this.TITLE,
-            [Command_1.Command.SCREEN]: this.SCREEN
+            [Command_1.Command.SCREEN]: this.SCREEN,
+            [Command_1.Command.VAR]: this.VAR,
         };
     }
     execute(programLine) {
@@ -173,6 +179,7 @@ class CommandExecutor {
             this.validator.programLine = programLine;
             const commandFunction = this.commandDict[cmd];
             commandFunction({ validator: this.validator, param: programLine.params }, this.env);
+            // this.ptm.log(`${cmd} executed with params: ${programLine.params}`);
         }
         else {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
@@ -180,6 +187,8 @@ class CommandExecutor {
     }
     NOP(intp, env) {
         intp.validator.argc(0);
+    }
+    TEST(intp, env) {
     }
     DATA(intp, env) {
     }
@@ -191,14 +200,18 @@ class CommandExecutor {
     }
     TITLE(intp, env) {
         intp.validator.argc(1);
+        window.document.title = intp.param[0].text;
     }
     SCREEN(intp, env) {
         intp.validator.argc(4);
-        const width = intp.param[0].numeric_value;
-        const height = intp.param[1].numeric_value;
-        const horizontalStretch = intp.param[2].numeric_value;
-        const verticalStretch = intp.param[3].numeric_value;
-        env.display = new Display_1.Display(env.displayElement, width, height, horizontalStretch, verticalStretch);
+        const width = intp.param[0].number;
+        const height = intp.param[1].number;
+        const hStretch = intp.param[2].number;
+        const vStretch = intp.param[3].number;
+        env.display = new Display_1.Display(env.displayElement, width, height, hStretch, vStretch);
+    }
+    VAR(intp, env) {
+        intp.validator.argc(2);
     }
 }
 exports.CommandExecutor = CommandExecutor;
@@ -232,11 +245,11 @@ exports.CommandValidator = CommandValidator;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
+const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
 const Parser_1 = require("./Parser/Parser");
 const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
 const Environment_1 = require("./Runtime/Environment");
 const CommandValidator_1 = require("./Interpreter/CommandValidator");
-const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
 document.addEventListener("DOMContentLoaded", () => {
     let ptmlElement = document.querySelector('script[type="text/ptml"]');
     if (ptmlElement === null || ptmlElement.textContent === null) {
@@ -252,33 +265,37 @@ class PTM {
     constructor(displayElement, srcPtml) {
         this.env = new Environment_1.Environment(displayElement);
         this.validator = new CommandValidator_1.CommandValidator();
-        this.executor = new CommandExecutor_1.CommandExecutor(this.env, this.validator);
+        this.executor = new CommandExecutor_1.CommandExecutor(this, this.env, this.validator);
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.start();
     }
     start() {
-        console.log("Machine started");
         // TODO: This should run asynchronously at 1ms intervals
         this.program.lines.forEach(line => {
             this.executor.execute(line);
         });
     }
+    log(msg) {
+        console.log(`PTM -> ${msg}`);
+    }
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_InitializationError":1,"./Interpreter/CommandExecutor":6,"./Interpreter/CommandValidator":7,"./Parser/Parser":13,"./Runtime/Environment":17}],9:[function(require,module,exports){
+},{"./Errors/PTM_InitializationError":1,"./Interpreter/CommandExecutor":6,"./Interpreter/CommandValidator":7,"./Parser/Parser":14,"./Runtime/Environment":18}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Command = void 0;
 var Command;
 (function (Command) {
     Command["NOP"] = "NOP";
+    Command["TEST"] = "TEST";
     Command["DATA"] = "DATA";
     Command["HALT"] = "HALT";
     Command["RESET"] = "RESET";
     Command["TITLE"] = "TITLE";
     Command["SCREEN"] = "SCREEN";
+    Command["VAR"] = "VAR";
 })(Command = exports.Command || (exports.Command = {}));
 
 },{}],10:[function(require,module,exports){
@@ -287,44 +304,153 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
 var ExecutionTime;
 (function (ExecutionTime) {
-    ExecutionTime[ExecutionTime["Undefined"] = 0] = "Undefined";
-    ExecutionTime[ExecutionTime["CompileTime"] = 1] = "CompileTime";
-    ExecutionTime[ExecutionTime["RunTime"] = 2] = "RunTime";
+    ExecutionTime["Undefined"] = "Undefined";
+    ExecutionTime["CompileTime"] = "CompileTime";
+    ExecutionTime["RunTime"] = "RunTime";
 })(ExecutionTime = exports.ExecutionTime || (exports.ExecutionTime = {}));
 
 },{}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.NumberBase = void 0;
+var NumberBase;
+(function (NumberBase) {
+    NumberBase["None"] = "None";
+    NumberBase["Decimal"] = "Decimal";
+    NumberBase["Hexadecimal"] = "Hexadecimal";
+    NumberBase["Binary"] = "Binary";
+})(NumberBase = exports.NumberBase || (exports.NumberBase = {}));
+
+},{}],12:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
+const PTM_ParseError_1 = require("../Errors/PTM_ParseError");
+const NumberBase_1 = require("./NumberBase");
 const ParamType_1 = require("./ParamType");
 class Param {
-    constructor(src) {
-        this.type = ParamType_1.ParamType.Undefined;
-        this.textual_value = src;
-        this.numeric_value = Number(src);
+    constructor(programLine, src) {
+        this.numericBase = NumberBase_1.NumberBase.None;
+        this.numericSign = "";
+        this.programLine = programLine;
+        this.text = src;
+        this.type = this.determineType(src);
+        this.text = this.maybeTransformText();
+        this.number = this.tryParseNumber();
     }
     toString() {
-        return this.textual_value;
+        if (this.type === ParamType_1.ParamType.NumberLiteral) {
+            return ` ${this.text} (${this.type} | ${this.numericBase} | Sign:${this.numericSign ? this.numericSign : "None"})`;
+        }
+        else {
+            return ` ${this.text} (${this.type})`;
+        }
+    }
+    determineType(src) {
+        if (src.length === 0) {
+            return ParamType_1.ParamType.Empty;
+        }
+        if (src.length > 1 && (src[0] === "-" || src[0] === "+")) {
+            this.numericSign = src[0];
+            src = src.substring(1);
+        }
+        const srcPrefix = src.length > 2 ? src.substring(0, 2).toUpperCase() : "";
+        if (src[0] === "\"" && src[src.length - 1] === "\"") {
+            return ParamType_1.ParamType.StringLiteral;
+        }
+        else if (src[0] === "'" && src[src.length - 1] === "'") {
+            return ParamType_1.ParamType.CharLiteral;
+        }
+        else if (srcPrefix === "&H") {
+            this.numericBase = NumberBase_1.NumberBase.Hexadecimal;
+            return ParamType_1.ParamType.NumberLiteral;
+        }
+        else if (srcPrefix === "&B") {
+            this.numericBase = NumberBase_1.NumberBase.Binary;
+            return ParamType_1.ParamType.NumberLiteral;
+        }
+        else if (src[0].match(/[0-9]/)) {
+            this.numericBase = NumberBase_1.NumberBase.Decimal;
+            return ParamType_1.ParamType.NumberLiteral;
+        }
+        else if (src[0].match(/[a-z]/i)) {
+            return ParamType_1.ParamType.Identifier;
+        }
+        else {
+            throw new PTM_ParseError_1.PTM_ParseError(`Could not parse parameter type: ${src}`, this.programLine);
+        }
+    }
+    maybeTransformText() {
+        if (this.type === ParamType_1.ParamType.StringLiteral) {
+            return this.unenclose(this.text);
+        }
+        else if (this.type === ParamType_1.ParamType.CharLiteral) {
+            if (this.text.length === 3) {
+                return this.unenclose(this.text);
+            }
+            else {
+                throw new PTM_ParseError_1.PTM_ParseError(`Invalid character literal: ${this.text}`, this.programLine);
+            }
+        }
+        else if (this.type == ParamType_1.ParamType.NumberLiteral) {
+            return this.text;
+        }
+        return this.text;
+    }
+    unenclose(str) {
+        if (str.length > 2) {
+            return str.substring(1, this.text.length - 1);
+        }
+        else {
+            return "";
+        }
+    }
+    tryParseNumber() {
+        let num = NaN;
+        let str = this.text.toUpperCase().replace("-", "").replace("+", "");
+        if (this.type === ParamType_1.ParamType.NumberLiteral) {
+            if (this.numericBase == NumberBase_1.NumberBase.Hexadecimal) {
+                str = str.replace("&H", "0x");
+                num = Number(str);
+            }
+            else if (this.numericBase == NumberBase_1.NumberBase.Binary) {
+                str = str.replace("&B", "0b");
+                num = Number(str);
+            }
+            else {
+                num = Number(str);
+            }
+        }
+        else if (this.type === ParamType_1.ParamType.CharLiteral) {
+            num = this.text.charCodeAt(0);
+        }
+        else if (this.type === ParamType_1.ParamType.StringLiteral) {
+            num = Number(this.text);
+        }
+        if (this.type !== ParamType_1.ParamType.StringLiteral && this.numericSign === "-") {
+            num = num * -1;
+        }
+        return num;
     }
 }
 exports.Param = Param;
 
-},{"./ParamType":12}],12:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"./NumberBase":11,"./ParamType":13}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
 var ParamType;
 (function (ParamType) {
-    ParamType[ParamType["Undefined"] = 0] = "Undefined";
-    ParamType[ParamType["NumberLiteral"] = 1] = "NumberLiteral";
-    ParamType[ParamType["CharLiteral"] = 2] = "CharLiteral";
-    ParamType[ParamType["StringLiteral"] = 3] = "StringLiteral";
-    ParamType[ParamType["Identifier"] = 4] = "Identifier";
-    ParamType[ParamType["ArrayIxLiteral"] = 5] = "ArrayIxLiteral";
-    ParamType[ParamType["ArrayIxVarIdentifier"] = 6] = "ArrayIxVarIdentifier"; // array[var_id]
+    ParamType["Empty"] = "Empty";
+    ParamType["NumberLiteral"] = "NumberLiteral";
+    ParamType["CharLiteral"] = "CharLiteral";
+    ParamType["StringLiteral"] = "StringLiteral";
+    ParamType["Identifier"] = "Identifier";
+    ParamType["ArrayIxLiteral"] = "ArrayIxLiteral";
+    ParamType["ArrayIxVarIdentifier"] = "ArrayIxVarIdentifier";
 })(ParamType = exports.ParamType || (exports.ParamType = {}));
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
@@ -343,7 +469,6 @@ class Parser {
         this.program = new Program_1.Program();
     }
     parse() {
-        console.log("Compilation started");
         this.program.lines = [];
         let lineNr = 0;
         const srcLines = this.srcPtml.trim().split(this.crlf);
@@ -368,7 +493,6 @@ class Parser {
                 // Ignore entire line
             }
         });
-        console.log("Compilation finished");
         return this.program;
     }
     parseSrcLine(srcLine, lineNr) {
@@ -412,7 +536,7 @@ class Parser {
         const paramString = src.substring(ixFirstSpace);
         const paramList = this.splitParamString(paramString);
         paramList.forEach(rawParam => {
-            const param = new Param_1.Param(rawParam);
+            const param = new Param_1.Param(line, rawParam);
             params.push(param);
         });
         return params;
@@ -460,7 +584,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"./Command":9,"./ExecutionTime":10,"./Param":11,"./Program":14,"./ProgramLine":15,"./ProgramLineType":16}],14:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"./Command":9,"./ExecutionTime":10,"./Param":12,"./Program":15,"./ProgramLine":16,"./ProgramLineType":17}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;
@@ -474,7 +598,7 @@ class Program {
 }
 exports.Program = Program;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLine = void 0;
@@ -495,18 +619,18 @@ class ProgramLine {
 }
 exports.ProgramLine = ProgramLine;
 
-},{"./ExecutionTime":10,"./ProgramLineType":16}],16:[function(require,module,exports){
+},{"./ExecutionTime":10,"./ProgramLineType":17}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLineType = void 0;
 var ProgramLineType;
 (function (ProgramLineType) {
-    ProgramLineType[ProgramLineType["Undefined"] = 0] = "Undefined";
-    ProgramLineType[ProgramLineType["Ignore"] = 1] = "Ignore";
-    ProgramLineType[ProgramLineType["Executable"] = 2] = "Executable";
+    ProgramLineType["Undefined"] = "Undefined";
+    ProgramLineType["Ignore"] = "Ignore";
+    ProgramLineType["Executable"] = "Executable";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Environment = void 0;

@@ -1,6 +1,6 @@
 export enum ExecutionTime {
 
-    Undefined,
-    CompileTime,
-    RunTime
+    Undefined = "Undefined",
+    CompileTime = "CompileTime",
+    RunTime = "RunTime"
 }

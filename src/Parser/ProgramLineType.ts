@@ -1,6 +1,6 @@
 export enum ProgramLineType {
     
-    Undefined,
-    Ignore,
-    Executable
+    Undefined = "Undefined",
+    Ignore = "Ignore",
+    Executable = "Executable"
 }

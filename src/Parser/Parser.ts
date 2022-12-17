@@ -22,7 +22,6 @@ export class Parser {
     }
 
     parse() : Program {
-        console.log("Compilation started");
         this.program.lines = [];
         let lineNr = 0;
         const srcLines = this.srcPtml.trim().split(this.crlf);
@@ -43,7 +42,6 @@ export class Parser {
                 // Ignore entire line
             }
         });
-        console.log("Compilation finished");
         return this.program;
     }
 
@@ -87,7 +85,7 @@ export class Parser {
         const paramString = src.substring(ixFirstSpace);
         const paramList = this.splitParamString(paramString);
         paramList.forEach(rawParam => {
-            const param = new Param(rawParam);
+            const param = new Param(line, rawParam);
             params.push(param);
         })
         return params;
