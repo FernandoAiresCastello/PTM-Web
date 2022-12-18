@@ -155,9 +155,8 @@ const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
 const Command_1 = require("../Parser/Command");
 const Display_1 = require("../Graphics/Display");
 class CommandExecutor {
-    constructor(ptm, env, validator) {
+    constructor(ptm, validator) {
         this.ptm = ptm;
-        this.env = env;
         this.validator = validator;
         this.commandDict = this.initCommands();
     }
@@ -176,42 +175,45 @@ class CommandExecutor {
     execute(programLine) {
         const cmd = programLine.cmd;
         if (cmd) {
+            this.ptm.log(` ${programLine.lineNr}: ${programLine.src}`);
             this.validator.programLine = programLine;
             const commandFunction = this.commandDict[cmd];
-            commandFunction({ validator: this.validator, param: programLine.params }, this.env);
-            this.ptm.log(` ${programLine.lineNr}: ${programLine.src}`);
+            commandFunction({ ptm: this.ptm, validator: this.validator, param: programLine.params });
         }
         else {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
         }
     }
-    NOP(intp, env) {
+    NOP(intp) {
         intp.validator.argc(0);
     }
-    TEST(intp, env) {
+    TEST(intp) {
     }
-    DATA(intp, env) {
+    DATA(intp) {
     }
-    HALT(intp, env) {
+    HALT(intp) {
         intp.validator.argc(0);
-        env.haltRequested = true;
+        intp.ptm.stop("Halt requested");
     }
-    RESET(intp, env) {
+    RESET(intp) {
         intp.validator.argc(0);
+        intp.ptm.reset();
     }
-    TITLE(intp, env) {
+    TITLE(intp) {
         intp.validator.argc(1);
         window.document.title = intp.param[0].text;
     }
-    SCREEN(intp, env) {
+    SCREEN(intp) {
         intp.validator.argc(4);
         const width = intp.param[0].number;
         const height = intp.param[1].number;
         const hStretch = intp.param[2].number;
         const vStretch = intp.param[3].number;
-        env.display = new Display_1.Display(env.displayElement, width, height, hStretch, vStretch);
+        if (!intp.ptm.display) {
+            intp.ptm.display = new Display_1.Display(intp.ptm.displayElement, width, height, hStretch, vStretch);
+        }
     }
-    VAR(intp, env) {
+    VAR(intp) {
         intp.validator.argc(2);
     }
 }
@@ -249,12 +251,12 @@ exports.PTM = void 0;
 const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
 const Parser_1 = require("./Parser/Parser");
 const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
-const Environment_1 = require("./Runtime/Environment");
 const CommandValidator_1 = require("./Interpreter/CommandValidator");
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("===================================================");
-    console.log("  Welcome to the Programmable Tile Machine (PTM)!  ");
-    console.log("===================================================");
+    console.log("=======================================================\n" +
+        "  ~ Welcome to the PTM - Programmable Tile Machine! ~  \n" +
+        "    Developed by: Fernando Aires Castello  (C) 2022    \n" +
+        "=======================================================\n");
     let ptmlElement = document.querySelector('script[type="text/ptml"]');
     if (ptmlElement === null || ptmlElement.textContent === null) {
         throw new PTM_InitializationError_1.PTM_InitializationError("PTML script tag not found");
@@ -269,25 +271,26 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 class PTM {
     constructor(displayElement, srcPtml) {
-        this.env = new Environment_1.Environment(displayElement);
+        this.displayElement = displayElement;
+        this.display = null;
         this.validator = new CommandValidator_1.CommandValidator();
-        this.executor = new CommandExecutor_1.CommandExecutor(this, this.env, this.validator);
+        this.executor = new CommandExecutor_1.CommandExecutor(this, this.validator);
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
-        this.programPtr = 0;
         this.intervalLength = 255;
+        this.programPtr = 0;
         this.branching = false;
         this.intervalId = this.start();
+    }
+    log(msg) {
+        console.log(`${msg}`);
     }
     start() {
         this.log("Interpreter started");
         return window.setInterval(() => this.cycle(), this.intervalLength);
     }
     cycle() {
-        if (this.env.haltRequested) {
-            this.stop("Halt requested");
-        }
-        else if (this.programPtr < this.program.length()) {
+        if (this.programPtr < this.program.length()) {
             this.executor.execute(this.program.lines[this.programPtr]);
             if (!this.branching) {
                 this.programPtr++;
@@ -295,19 +298,24 @@ class PTM {
                     this.stop("Execution pointer past end of script");
                 }
             }
+            else {
+                this.branching = false;
+            }
         }
     }
     stop(reason) {
         window.clearInterval(this.intervalId);
-        this.log(`Interpreter exited. Reason: ${reason}`);
+        this.log(`Interpreter exited.\nReason: ${reason}`);
     }
-    log(msg) {
-        console.log(`${msg}`);
+    reset() {
+        this.log("Machine reset");
+        this.branching = true;
+        this.programPtr = 0;
     }
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_InitializationError":1,"./Interpreter/CommandExecutor":6,"./Interpreter/CommandValidator":7,"./Parser/Parser":14,"./Runtime/Environment":18}],9:[function(require,module,exports){
+},{"./Errors/PTM_InitializationError":1,"./Interpreter/CommandExecutor":6,"./Interpreter/CommandValidator":7,"./Parser/Parser":14}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Command = void 0;
@@ -695,18 +703,5 @@ var ProgramLineType;
     ProgramLineType["Ignore"] = "Ignore";
     ProgramLineType["Executable"] = "Executable";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
-
-},{}],18:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Environment = void 0;
-class Environment {
-    constructor(displayElement) {
-        this.displayElement = displayElement;
-        this.display = null;
-        this.haltRequested = false;
-    }
-}
-exports.Environment = Environment;
 
 },{}]},{},[8]);
