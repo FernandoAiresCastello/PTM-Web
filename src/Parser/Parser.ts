@@ -22,6 +22,7 @@ export class Parser {
     }
 
     parse() : Program {
+        this.ptm.log("Parse/compile started");
         this.program.lines = [];
         let lineNr = 0;
         const srcLines = this.srcPtml.trim().split(this.crlf);
@@ -42,6 +43,7 @@ export class Parser {
                 // Ignore entire line
             }
         });
+        this.ptm.log("Parse/compile finished normally");
         return this.program;
     }
 

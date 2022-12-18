@@ -13,7 +13,7 @@ export class ProgramLine {
     params: Param[];
 
     constructor(src: string, lineNr: number) {
-        this.src = src;
+        this.src = src.trim();
         this.lineNr = lineNr;
         this.type = ProgramLineType.Undefined;
         this.execTime = ExecutionTime.Undefined;

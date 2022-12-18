@@ -41,7 +41,7 @@ export class CommandExecutor {
             this.validator.programLine = programLine;
             const commandFunction = this.commandDict[cmd];
             commandFunction({ validator: this.validator, param: programLine.params }, this.env);
-            // this.ptm.log(`${cmd} executed with params: ${programLine.params}`);
+            this.ptm.log(` ${programLine.lineNr}: ${programLine.src}`);
         } else {
             throw new PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
         }
@@ -59,6 +59,7 @@ export class CommandExecutor {
 
     HALT(intp: Interpreter, env: Environment) {
         intp.validator.argc(0);
+        env.haltRequested = true;
     }
 
     RESET(intp: Interpreter, env: Environment) {

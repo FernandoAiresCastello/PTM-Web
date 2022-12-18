@@ -11,4 +11,8 @@ export class Program {
     addLine(line: ProgramLine) {
         this.lines.push(line);
     }
+
+    length() {
+        return this.lines.length;
+    }
 }

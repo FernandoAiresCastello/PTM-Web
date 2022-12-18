@@ -179,7 +179,7 @@ class CommandExecutor {
             this.validator.programLine = programLine;
             const commandFunction = this.commandDict[cmd];
             commandFunction({ validator: this.validator, param: programLine.params }, this.env);
-            // this.ptm.log(`${cmd} executed with params: ${programLine.params}`);
+            this.ptm.log(` ${programLine.lineNr}: ${programLine.src}`);
         }
         else {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
@@ -194,6 +194,7 @@ class CommandExecutor {
     }
     HALT(intp, env) {
         intp.validator.argc(0);
+        env.haltRequested = true;
     }
     RESET(intp, env) {
         intp.validator.argc(0);
@@ -251,14 +252,19 @@ const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
 const Environment_1 = require("./Runtime/Environment");
 const CommandValidator_1 = require("./Interpreter/CommandValidator");
 document.addEventListener("DOMContentLoaded", () => {
+    console.log("===================================================");
+    console.log("  Welcome to the Programmable Tile Machine (PTM)!  ");
+    console.log("===================================================");
     let ptmlElement = document.querySelector('script[type="text/ptml"]');
     if (ptmlElement === null || ptmlElement.textContent === null) {
-        throw new PTM_InitializationError_1.PTM_InitializationError("PTML script not found");
+        throw new PTM_InitializationError_1.PTM_InitializationError("PTML script tag not found");
     }
+    console.log("PTML script loaded");
     let displayElement = document.getElementById("display");
     if (displayElement === null) {
         throw new PTM_InitializationError_1.PTM_InitializationError("Display element not found");
     }
+    console.log("Display element found");
     window.PTM = new PTM(displayElement, ptmlElement.textContent);
 });
 class PTM {
@@ -268,17 +274,35 @@ class PTM {
         this.executor = new CommandExecutor_1.CommandExecutor(this, this.env, this.validator);
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
-        console.log(this.program.lines[1].params[0]);
-        this.start();
+        this.programPtr = 0;
+        this.intervalLength = 255;
+        this.branching = false;
+        this.intervalId = this.start();
     }
     start() {
-        // TODO: This should run asynchronously at 1ms intervals
-        this.program.lines.forEach(line => {
-            this.executor.execute(line);
-        });
+        this.log("Interpreter started");
+        return window.setInterval(() => this.cycle(), this.intervalLength);
+    }
+    cycle() {
+        if (this.env.haltRequested) {
+            this.stop("Halt requested");
+        }
+        else if (this.programPtr < this.program.length()) {
+            this.executor.execute(this.program.lines[this.programPtr]);
+            if (!this.branching) {
+                this.programPtr++;
+                if (this.programPtr >= this.program.length()) {
+                    this.stop("Execution pointer past end of script");
+                }
+            }
+        }
+    }
+    stop(reason) {
+        window.clearInterval(this.intervalId);
+        this.log(`Interpreter exited. Reason: ${reason}`);
     }
     log(msg) {
-        console.log(`PTM -> ${msg}`);
+        console.log(`${msg}`);
     }
 }
 exports.PTM = PTM;
@@ -506,6 +530,7 @@ class Parser {
         this.program = new Program_1.Program();
     }
     parse() {
+        this.ptm.log("Parse/compile started");
         this.program.lines = [];
         let lineNr = 0;
         const srcLines = this.srcPtml.trim().split(this.crlf);
@@ -530,6 +555,7 @@ class Parser {
                 // Ignore entire line
             }
         });
+        this.ptm.log("Parse/compile finished normally");
         return this.program;
     }
     parseSrcLine(srcLine, lineNr) {
@@ -632,6 +658,9 @@ class Program {
     addLine(line) {
         this.lines.push(line);
     }
+    length() {
+        return this.lines.length;
+    }
 }
 exports.Program = Program;
 
@@ -643,7 +672,7 @@ const ProgramLineType_1 = require("./ProgramLineType");
 const ExecutionTime_1 = require("./ExecutionTime");
 class ProgramLine {
     constructor(src, lineNr) {
-        this.src = src;
+        this.src = src.trim();
         this.lineNr = lineNr;
         this.type = ProgramLineType_1.ProgramLineType.Undefined;
         this.execTime = ExecutionTime_1.ExecutionTime.Undefined;
@@ -675,6 +704,7 @@ class Environment {
     constructor(displayElement) {
         this.displayElement = displayElement;
         this.display = null;
+        this.haltRequested = false;
     }
 }
 exports.Environment = Environment;
