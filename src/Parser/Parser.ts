@@ -22,28 +22,33 @@ export class Parser {
     }
 
     parse() : Program {
-        this.ptm.log("Parse/compile started");
+        this.ptm.logInfo("Parse/compile started");
         this.program.lines = [];
-        let lineNr = 0;
+        let srcLineNr = 0;
+        let actualLineIndex = 0;
         const srcLines = this.srcPtml.trim().split(this.crlf);
         srcLines.forEach((srcLine) => {
-            lineNr++;
-            const newPrgLine = this.parseSrcLine(srcLine, lineNr);
+            srcLineNr++;
+            const newPrgLine = this.parseSrcLine(srcLine, srcLineNr);
             if (newPrgLine.type === ProgramLineType.Executable) {
                 if (newPrgLine.execTime === ExecutionTime.RunTime) {
                     this.program.addLine(newPrgLine);
+                    actualLineIndex++;
                 } else if (newPrgLine.execTime === ExecutionTime.CompileTime) {
                     this.ptm.executor.execute(newPrgLine);
                 } else if (newPrgLine.execTime === ExecutionTime.Undefined) {
                     throw new PTM_ParseError("Could not determine execution time for this line", newPrgLine);
                 }
+            } else if (newPrgLine.type === ProgramLineType.Label) {
+                const label = newPrgLine.src;
+                this.program.addLabel(label, actualLineIndex);
             } else if (newPrgLine.type === ProgramLineType.Undefined) {
                 throw new PTM_ParseError("Could not determine type of this line", newPrgLine);
             } else if (newPrgLine.type === ProgramLineType.Ignore) {
                 // Ignore entire line
             }
         });
-        this.ptm.log("Parse/compile finished normally");
+        this.ptm.logInfo("Parse/compile finished normally");
         return this.program;
     }
 
@@ -51,6 +56,9 @@ export class Parser {
         const line = new ProgramLine(srcLine, lineNr);
         if (this.isBlank(line.src) || this.isComment(line.src)) {
             line.type = ProgramLineType.Ignore;
+        } else if (line.src.trim().endsWith(":")) {
+            line.type = ProgramLineType.Label;
+            line.src = line.src.substring(0, line.src.length - 1);
         } else {
             line.cmd = this.extractCommand(line);
             line.params = this.extractParams(line);

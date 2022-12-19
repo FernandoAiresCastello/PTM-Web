@@ -3,15 +3,18 @@ import { Parser } from "./Parser/Parser";
 import { Program } from "./Parser/Program";
 import { CommandExecutor } from "./Interpreter/CommandExecutor";
 import { CommandValidator } from "./Interpreter/CommandValidator";
+import { ProgramLine } from "./Parser/ProgramLine";
 import { Display } from "./Graphics/Display";
+import { PTM_RuntimeError } from "./Errors/PTM_RuntimeError";
 
 document.addEventListener("DOMContentLoaded", () => {
 
-    console.log(
+    console.log("%c" +
         "=======================================================\n" +
         "  ~ Welcome to the PTM - Programmable Tile Machine! ~  \n" +
         "    Developed by: Fernando Aires Castello  (C) 2022    \n" +
-        "=======================================================\n"
+        "=======================================================",
+        "color:#0f0"
     );
 
     let ptmlElement = document.querySelector('script[type="text/ptml"]');
@@ -41,6 +44,7 @@ export class PTM {
     private branching: boolean;
     displayElement: HTMLElement;
     display: Display | null;
+    private currentLine: ProgramLine | null;
 
     constructor(displayElement: HTMLElement,  srcPtml: string) {
 
@@ -53,40 +57,65 @@ export class PTM {
         this.intervalLength = 255;
         this.programPtr = 0;
         this.branching = false;
+        this.currentLine = null;
         this.intervalId = this.start();
     }
 
-    log(msg: string) {
-        console.log(`${msg}`);
+    logInfo(msg: string) {
+        console.log(msg);
+    }
+
+    logExecution(programLine: ProgramLine) {
+        console.log(` ${programLine.lineNr}: %c${programLine.src}`, `color:#ff0`);
     }
 
     start(): number {
-        this.log("Interpreter started");
+        this.logInfo("Interpreter started");
         return window.setInterval(() => this.cycle(), this.intervalLength);
     }
 
     cycle() {
-        if (this.programPtr < this.program.length()) {
-            this.executor.execute(this.program.lines[this.programPtr]);
-            if (!this.branching) {
-                this.programPtr++;
-                if (this.programPtr >= this.program.length()) {
-                    this.stop("Execution pointer past end of script");
+        if (this.programPtr >= this.program.length()) {
+            this.stop("Execution pointer past end of script");
+        } else {
+            this.currentLine = this.program.lines[this.programPtr];
+            try {
+                this.executor.execute(this.currentLine);
+                if (!this.branching) {
+                    this.programPtr++;
+                } else {
+                    this.branching = false;
                 }
-            } else {
-                this.branching = false;
+            } catch (e) {
+                this.stop("Runtime error");
+                throw e;
             }
         }
     }
 
-    stop(reason: string) {
+    stop(reason?: string) {
         window.clearInterval(this.intervalId);
-        this.log(`Interpreter exited.\nReason: ${reason}`);
+        if (reason) {
+            console.log(`Interpreter exited.\n%cReason: ${reason}`, "color:#888");
+        } else {
+            console.log(`Interpreter exited`);
+        }
     }
 
     reset() {
-        this.log("Machine reset");
-        this.branching = true;
+        this.logInfo("Machine reset");
         this.programPtr = 0;
+        this.branching = true;
+        this.display?.reset();
+    }
+
+    branchToLabel(label: string) {
+        const prgLineIx = this.program.labels[label];
+        if (prgLineIx !== undefined) {
+            this.programPtr = prgLineIx;
+            this.branching = true;
+        } else {
+            throw new PTM_RuntimeError(`Label not found: ${label}`, this.currentLine!);
+        }
     }
 }

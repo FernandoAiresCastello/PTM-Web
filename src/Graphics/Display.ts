@@ -3,6 +3,7 @@ import { CanvasPoint } from "./CanvasPoint";
 
 export class Display {
 
+    static readonly DefaultBackgroundColor = "#000000";
     private canvasElement: HTMLCanvasElement;
     private canvas: CanvasRenderingContext2D;
     private canvasWidth: number;
@@ -39,7 +40,12 @@ export class Display {
         this.canvas.imageSmoothingQuality = 'low';
         this.pixelPositions = this.calculatePixelPositions();
         this.pixels = [];
-        this.clearPixels('#000000');
+        this.clearPixels(Display.DefaultBackgroundColor);
+        this.update();
+    }
+
+    reset() {
+        this.clearPixels(Display.DefaultBackgroundColor);
         this.update();
     }
 

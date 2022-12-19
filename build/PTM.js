@@ -81,7 +81,11 @@ class Display {
         this.canvas.imageSmoothingQuality = 'low';
         this.pixelPositions = this.calculatePixelPositions();
         this.pixels = [];
-        this.clearPixels('#000000');
+        this.clearPixels(Display.DefaultBackgroundColor);
+        this.update();
+    }
+    reset() {
+        this.clearPixels(Display.DefaultBackgroundColor);
         this.update();
     }
     clearPixels(rgb) {
@@ -146,6 +150,7 @@ class Display {
     }
 }
 exports.Display = Display;
+Display.DefaultBackgroundColor = "#000000";
 
 },{"../Errors/PTM_InitializationError":1,"./CanvasPoint":4}],6:[function(require,module,exports){
 "use strict";
@@ -162,58 +167,63 @@ class CommandExecutor {
     }
     initCommands() {
         return {
-            [Command_1.Command.NOP]: this.NOP,
             [Command_1.Command.TEST]: this.TEST,
             [Command_1.Command.DATA]: this.DATA,
             [Command_1.Command.HALT]: this.HALT,
             [Command_1.Command.RESET]: this.RESET,
             [Command_1.Command.TITLE]: this.TITLE,
             [Command_1.Command.SCREEN]: this.SCREEN,
+            [Command_1.Command.GOTO]: this.GOTO,
             [Command_1.Command.VAR]: this.VAR,
         };
     }
     execute(programLine) {
         const cmd = programLine.cmd;
         if (cmd) {
-            this.ptm.log(` ${programLine.lineNr}: ${programLine.src}`);
+            this.ptm.logExecution(programLine);
             this.validator.programLine = programLine;
             const commandFunction = this.commandDict[cmd];
-            commandFunction({ ptm: this.ptm, validator: this.validator, param: programLine.params });
+            commandFunction(this.ptm, { validator: this.validator, param: programLine.params });
         }
         else {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
         }
     }
-    NOP(intp) {
+    TEST(ptm, intp) {
+    }
+    DATA(ptm, intp) {
+    }
+    HALT(ptm, intp) {
         intp.validator.argc(0);
+        ptm.stop("Halt requested");
     }
-    TEST(intp) {
-    }
-    DATA(intp) {
-    }
-    HALT(intp) {
+    RESET(ptm, intp) {
         intp.validator.argc(0);
-        intp.ptm.stop("Halt requested");
+        ptm.reset();
     }
-    RESET(intp) {
-        intp.validator.argc(0);
-        intp.ptm.reset();
-    }
-    TITLE(intp) {
+    TITLE(ptm, intp) {
         intp.validator.argc(1);
         window.document.title = intp.param[0].text;
     }
-    SCREEN(intp) {
+    SCREEN(ptm, intp) {
         intp.validator.argc(4);
         const width = intp.param[0].number;
         const height = intp.param[1].number;
         const hStretch = intp.param[2].number;
         const vStretch = intp.param[3].number;
-        if (!intp.ptm.display) {
-            intp.ptm.display = new Display_1.Display(intp.ptm.displayElement, width, height, hStretch, vStretch);
+        if (ptm.display) {
+            ptm.display.reset();
+        }
+        else {
+            ptm.display = new Display_1.Display(ptm.displayElement, width, height, hStretch, vStretch);
         }
     }
-    VAR(intp) {
+    GOTO(ptm, intp) {
+        intp.validator.argc(1);
+        const label = intp.param[0].text;
+        ptm.branchToLabel(label);
+    }
+    VAR(ptm, intp) {
         intp.validator.argc(2);
     }
 }
@@ -252,11 +262,13 @@ const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
 const Parser_1 = require("./Parser/Parser");
 const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
 const CommandValidator_1 = require("./Interpreter/CommandValidator");
+const PTM_RuntimeError_1 = require("./Errors/PTM_RuntimeError");
 document.addEventListener("DOMContentLoaded", () => {
-    console.log("=======================================================\n" +
+    console.log("%c" +
+        "=======================================================\n" +
         "  ~ Welcome to the PTM - Programmable Tile Machine! ~  \n" +
         "    Developed by: Fernando Aires Castello  (C) 2022    \n" +
-        "=======================================================\n");
+        "=======================================================", "color:#0f0");
     let ptmlElement = document.querySelector('script[type="text/ptml"]');
     if (ptmlElement === null || ptmlElement.textContent === null) {
         throw new PTM_InitializationError_1.PTM_InitializationError("PTML script tag not found");
@@ -280,54 +292,82 @@ class PTM {
         this.intervalLength = 255;
         this.programPtr = 0;
         this.branching = false;
+        this.currentLine = null;
         this.intervalId = this.start();
     }
-    log(msg) {
-        console.log(`${msg}`);
+    logInfo(msg) {
+        console.log(msg);
+    }
+    logExecution(programLine) {
+        console.log(` ${programLine.lineNr}: %c${programLine.src}`, `color:#ff0`);
     }
     start() {
-        this.log("Interpreter started");
+        this.logInfo("Interpreter started");
         return window.setInterval(() => this.cycle(), this.intervalLength);
     }
     cycle() {
-        if (this.programPtr < this.program.length()) {
-            this.executor.execute(this.program.lines[this.programPtr]);
-            if (!this.branching) {
-                this.programPtr++;
-                if (this.programPtr >= this.program.length()) {
-                    this.stop("Execution pointer past end of script");
+        if (this.programPtr >= this.program.length()) {
+            this.stop("Execution pointer past end of script");
+        }
+        else {
+            this.currentLine = this.program.lines[this.programPtr];
+            try {
+                this.executor.execute(this.currentLine);
+                if (!this.branching) {
+                    this.programPtr++;
+                }
+                else {
+                    this.branching = false;
                 }
             }
-            else {
-                this.branching = false;
+            catch (e) {
+                this.stop("Runtime error");
+                throw e;
             }
         }
     }
     stop(reason) {
         window.clearInterval(this.intervalId);
-        this.log(`Interpreter exited.\nReason: ${reason}`);
+        if (reason) {
+            console.log(`Interpreter exited.\n%cReason: ${reason}`, "color:#888");
+        }
+        else {
+            console.log(`Interpreter exited`);
+        }
     }
     reset() {
-        this.log("Machine reset");
-        this.branching = true;
+        var _a;
+        this.logInfo("Machine reset");
         this.programPtr = 0;
+        this.branching = true;
+        (_a = this.display) === null || _a === void 0 ? void 0 : _a.reset();
+    }
+    branchToLabel(label) {
+        const prgLineIx = this.program.labels[label];
+        if (prgLineIx !== undefined) {
+            this.programPtr = prgLineIx;
+            this.branching = true;
+        }
+        else {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Label not found: ${label}`, this.currentLine);
+        }
     }
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_InitializationError":1,"./Interpreter/CommandExecutor":6,"./Interpreter/CommandValidator":7,"./Parser/Parser":14}],9:[function(require,module,exports){
+},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Interpreter/CommandExecutor":6,"./Interpreter/CommandValidator":7,"./Parser/Parser":14}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Command = void 0;
 var Command;
 (function (Command) {
-    Command["NOP"] = "NOP";
     Command["TEST"] = "TEST";
     Command["DATA"] = "DATA";
     Command["HALT"] = "HALT";
     Command["RESET"] = "RESET";
     Command["TITLE"] = "TITLE";
     Command["SCREEN"] = "SCREEN";
+    Command["GOTO"] = "GOTO";
     Command["VAR"] = "VAR";
 })(Command = exports.Command || (exports.Command = {}));
 
@@ -538,16 +578,18 @@ class Parser {
         this.program = new Program_1.Program();
     }
     parse() {
-        this.ptm.log("Parse/compile started");
+        this.ptm.logInfo("Parse/compile started");
         this.program.lines = [];
-        let lineNr = 0;
+        let srcLineNr = 0;
+        let actualLineIndex = 0;
         const srcLines = this.srcPtml.trim().split(this.crlf);
         srcLines.forEach((srcLine) => {
-            lineNr++;
-            const newPrgLine = this.parseSrcLine(srcLine, lineNr);
+            srcLineNr++;
+            const newPrgLine = this.parseSrcLine(srcLine, srcLineNr);
             if (newPrgLine.type === ProgramLineType_1.ProgramLineType.Executable) {
                 if (newPrgLine.execTime === ExecutionTime_1.ExecutionTime.RunTime) {
                     this.program.addLine(newPrgLine);
+                    actualLineIndex++;
                 }
                 else if (newPrgLine.execTime === ExecutionTime_1.ExecutionTime.CompileTime) {
                     this.ptm.executor.execute(newPrgLine);
@@ -556,6 +598,10 @@ class Parser {
                     throw new PTM_ParseError_1.PTM_ParseError("Could not determine execution time for this line", newPrgLine);
                 }
             }
+            else if (newPrgLine.type === ProgramLineType_1.ProgramLineType.Label) {
+                const label = newPrgLine.src;
+                this.program.addLabel(label, actualLineIndex);
+            }
             else if (newPrgLine.type === ProgramLineType_1.ProgramLineType.Undefined) {
                 throw new PTM_ParseError_1.PTM_ParseError("Could not determine type of this line", newPrgLine);
             }
@@ -563,13 +609,17 @@ class Parser {
                 // Ignore entire line
             }
         });
-        this.ptm.log("Parse/compile finished normally");
+        this.ptm.logInfo("Parse/compile finished normally");
         return this.program;
     }
     parseSrcLine(srcLine, lineNr) {
         const line = new ProgramLine_1.ProgramLine(srcLine, lineNr);
         if (this.isBlank(line.src) || this.isComment(line.src)) {
             line.type = ProgramLineType_1.ProgramLineType.Ignore;
+        }
+        else if (line.src.trim().endsWith(":")) {
+            line.type = ProgramLineType_1.ProgramLineType.Label;
+            line.src = line.src.substring(0, line.src.length - 1);
         }
         else {
             line.cmd = this.extractCommand(line);
@@ -662,9 +712,13 @@ exports.Program = void 0;
 class Program {
     constructor() {
         this.lines = [];
+        this.labels = {};
     }
     addLine(line) {
         this.lines.push(line);
+    }
+    addLabel(name, lineIx) {
+        this.labels[name] = lineIx;
     }
     length() {
         return this.lines.length;
@@ -702,6 +756,7 @@ var ProgramLineType;
     ProgramLineType["Undefined"] = "Undefined";
     ProgramLineType["Ignore"] = "Ignore";
     ProgramLineType["Executable"] = "Executable";
+    ProgramLineType["Label"] = "Label";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
 },{}]},{},[8]);

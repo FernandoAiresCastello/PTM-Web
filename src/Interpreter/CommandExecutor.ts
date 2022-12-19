@@ -21,13 +21,13 @@ export class CommandExecutor {
 
     initCommands() {
         return {
-            [Command.NOP]: this.NOP,
             [Command.TEST]: this.TEST,
             [Command.DATA]: this.DATA,
             [Command.HALT]: this.HALT,
             [Command.RESET]: this.RESET,
             [Command.TITLE]: this.TITLE,
             [Command.SCREEN]: this.SCREEN,
+            [Command.GOTO]: this.GOTO,
             [Command.VAR]: this.VAR,
         };
     }
@@ -35,41 +35,37 @@ export class CommandExecutor {
     execute(programLine: ProgramLine) {
         const cmd = programLine.cmd;
         if (cmd) {
-            this.ptm.log(` ${programLine.lineNr}: ${programLine.src}`);
+            this.ptm.logExecution(programLine);
             this.validator.programLine = programLine;
             const commandFunction = this.commandDict[cmd];
-            commandFunction({ ptm: this.ptm, validator: this.validator, param: programLine.params });
+            commandFunction(this.ptm, { validator: this.validator, param: programLine.params });
         } else {
             throw new PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
         }
     }
 
-    NOP(intp: Interpreter) {
+    TEST(ptm: PTM, intp: Interpreter) {
+    }
+
+    DATA(ptm: PTM, intp: Interpreter) {
+    }
+
+    HALT(ptm: PTM, intp: Interpreter) {
         intp.validator.argc(0);
+        ptm.stop("Halt requested");
     }
 
-    TEST(intp: Interpreter) {
-    }
-
-    DATA(intp: Interpreter) {
-    }
-
-    HALT(intp: Interpreter) {
+    RESET(ptm: PTM, intp: Interpreter) {
         intp.validator.argc(0);
-        intp.ptm.stop("Halt requested");
+        ptm.reset();
     }
 
-    RESET(intp: Interpreter) {
-        intp.validator.argc(0);
-        intp.ptm.reset();
-    }
-
-    TITLE(intp: Interpreter) {
+    TITLE(ptm: PTM, intp: Interpreter) {
         intp.validator.argc(1);
         window.document.title = intp.param[0].text;
     }
 
-    SCREEN(intp: Interpreter) {
+    SCREEN(ptm: PTM, intp: Interpreter) {
         intp.validator.argc(4);
 
         const width = intp.param[0].number;
@@ -77,12 +73,20 @@ export class CommandExecutor {
         const hStretch = intp.param[2].number;
         const vStretch = intp.param[3].number;
 
-        if (!intp.ptm.display) {
-            intp.ptm.display = new Display(intp.ptm.displayElement, width, height, hStretch, vStretch);
+        if (ptm.display) {
+            ptm.display.reset();
+        } else {
+            ptm.display = new Display(ptm.displayElement, width, height, hStretch, vStretch);
         }
     }
 
-    VAR(intp: Interpreter) {
+    GOTO(ptm: PTM, intp: Interpreter) {
+        intp.validator.argc(1);
+        const label = intp.param[0].text;
+        ptm.branchToLabel(label);
+    }
+
+    VAR(ptm: PTM, intp: Interpreter) {
         intp.validator.argc(2);
     }
 }
