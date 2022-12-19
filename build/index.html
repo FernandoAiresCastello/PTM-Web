@@ -7,13 +7,22 @@
 <div id="display"></div>
 <script type="text/ptml">
 
-loop:
+main:
     TITLE "Test Program"
     SCREEN 256,192,3,3
+    CALL sub1
+    CALL sub2
+    CALL sub3
+    HALT
+sub1:
     TEST 1
+    RET
+sub2:
     TEST 2
+    RET
+sub3:
     TEST 3
-    TEST 4
+    RET
 
 </script>
 </body>

@@ -174,6 +174,8 @@ class CommandExecutor {
             [Command_1.Command.TITLE]: this.TITLE,
             [Command_1.Command.SCREEN]: this.SCREEN,
             [Command_1.Command.GOTO]: this.GOTO,
+            [Command_1.Command.CALL]: this.CALL,
+            [Command_1.Command.RET]: this.RET,
             [Command_1.Command.VAR]: this.VAR,
         };
     }
@@ -221,7 +223,16 @@ class CommandExecutor {
     GOTO(ptm, intp) {
         intp.validator.argc(1);
         const label = intp.param[0].text;
-        ptm.branchToLabel(label);
+        ptm.gotoLabel(label);
+    }
+    CALL(ptm, intp) {
+        intp.validator.argc(1);
+        const label = intp.param[0].text;
+        ptm.callLabel(label);
+    }
+    RET(ptm, intp) {
+        intp.validator.argc(0);
+        ptm.returnFromLabel();
     }
     VAR(ptm, intp) {
         intp.validator.argc(2);
@@ -293,6 +304,7 @@ class PTM {
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
+        this.callStack = [];
         this.intervalId = this.start();
     }
     logInfo(msg) {
@@ -328,11 +340,12 @@ class PTM {
     }
     stop(reason) {
         window.clearInterval(this.intervalId);
+        const msg = "Interpreter exited";
         if (reason) {
-            console.log(`Interpreter exited.\n%cReason: ${reason}`, "color:#888");
+            console.log(`${msg}\n%cReason: ${reason}`, "color:#888");
         }
         else {
-            console.log(`Interpreter exited`);
+            console.log(msg);
         }
     }
     reset() {
@@ -342,7 +355,7 @@ class PTM {
         this.branching = true;
         (_a = this.display) === null || _a === void 0 ? void 0 : _a.reset();
     }
-    branchToLabel(label) {
+    gotoLabel(label) {
         const prgLineIx = this.program.labels[label];
         if (prgLineIx !== undefined) {
             this.programPtr = prgLineIx;
@@ -350,6 +363,26 @@ class PTM {
         }
         else {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Label not found: ${label}`, this.currentLine);
+        }
+    }
+    callLabel(label) {
+        const prgLineIx = this.program.labels[label];
+        if (prgLineIx !== undefined) {
+            this.callStack.push(this.programPtr + 1);
+            this.programPtr = prgLineIx;
+            this.branching = true;
+        }
+        else {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Label not found: ${label}`, this.currentLine);
+        }
+    }
+    returnFromLabel() {
+        if (this.callStack.length > 0) {
+            this.programPtr = this.callStack.pop();
+            this.branching = true;
+        }
+        else {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError("Call stack is empty", this.currentLine);
         }
     }
 }
@@ -368,6 +401,8 @@ var Command;
     Command["TITLE"] = "TITLE";
     Command["SCREEN"] = "SCREEN";
     Command["GOTO"] = "GOTO";
+    Command["CALL"] = "CALL";
+    Command["RET"] = "RET";
     Command["VAR"] = "VAR";
 })(Command = exports.Command || (exports.Command = {}));
 

@@ -45,6 +45,7 @@ export class PTM {
     displayElement: HTMLElement;
     display: Display | null;
     private currentLine: ProgramLine | null;
+    private callStack: number[];
 
     constructor(displayElement: HTMLElement,  srcPtml: string) {
 
@@ -58,6 +59,7 @@ export class PTM {
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
+        this.callStack = [];
         this.intervalId = this.start();
     }
 
@@ -95,10 +97,11 @@ export class PTM {
 
     stop(reason?: string) {
         window.clearInterval(this.intervalId);
+        const msg = "Interpreter exited";
         if (reason) {
-            console.log(`Interpreter exited.\n%cReason: ${reason}`, "color:#888");
+            console.log(`${msg}\n%cReason: ${reason}`, "color:#888");
         } else {
-            console.log(`Interpreter exited`);
+            console.log(msg);
         }
     }
 
@@ -109,13 +112,33 @@ export class PTM {
         this.display?.reset();
     }
 
-    branchToLabel(label: string) {
+    gotoSubroutine(label: string) {
         const prgLineIx = this.program.labels[label];
         if (prgLineIx !== undefined) {
             this.programPtr = prgLineIx;
             this.branching = true;
         } else {
             throw new PTM_RuntimeError(`Label not found: ${label}`, this.currentLine!);
+        }
+    }
+
+    callSubroutine(label: string) {
+        const prgLineIx = this.program.labels[label];
+        if (prgLineIx !== undefined) {
+            this.callStack.push(this.programPtr + 1);
+            this.programPtr = prgLineIx;
+            this.branching = true;
+        } else {
+            throw new PTM_RuntimeError(`Label not found: ${label}`, this.currentLine!);
+        }
+    }
+
+    returnFromSubroutine() {
+        if (this.callStack.length > 0) {
+            this.programPtr = this.callStack.pop()!;
+            this.branching = true;
+        } else {
+            throw new PTM_RuntimeError("Call stack is empty", this.currentLine!);
         }
     }
 }

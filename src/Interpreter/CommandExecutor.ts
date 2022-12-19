@@ -28,6 +28,8 @@ export class CommandExecutor {
             [Command.TITLE]: this.TITLE,
             [Command.SCREEN]: this.SCREEN,
             [Command.GOTO]: this.GOTO,
+            [Command.CALL]: this.CALL,
+            [Command.RET]: this.RET,
             [Command.VAR]: this.VAR,
         };
     }
@@ -83,7 +85,18 @@ export class CommandExecutor {
     GOTO(ptm: PTM, intp: Interpreter) {
         intp.validator.argc(1);
         const label = intp.param[0].text;
-        ptm.branchToLabel(label);
+        ptm.gotoSubroutine(label);
+    }
+
+    CALL(ptm: PTM, intp: Interpreter) {
+        intp.validator.argc(1);
+        const label = intp.param[0].text;
+        ptm.callSubroutine(label);
+    }
+
+    RET(ptm: PTM, intp: Interpreter) {
+        intp.validator.argc(0);
+        ptm.returnFromSubroutine();
     }
 
     VAR(ptm: PTM, intp: Interpreter) {

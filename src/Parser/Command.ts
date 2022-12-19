@@ -7,5 +7,7 @@ export enum Command {
     TITLE = "TITLE",
     SCREEN = "SCREEN",
     GOTO = "GOTO",
+    CALL = "CALL",
+    RET = "RET",
     VAR = "VAR",
 }
