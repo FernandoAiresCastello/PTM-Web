@@ -160,9 +160,9 @@ const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
 const Command_1 = require("../Parser/Command");
 const Display_1 = require("../Graphics/Display");
 class CommandExecutor {
-    constructor(ptm, validator) {
+    constructor(ptm, intp) {
         this.ptm = ptm;
-        this.validator = validator;
+        this.intp = intp;
         this.commandDict = this.initCommands();
     }
     initCommands() {
@@ -177,15 +177,18 @@ class CommandExecutor {
             [Command_1.Command.CALL]: this.CALL,
             [Command_1.Command.RET]: this.RET,
             [Command_1.Command.VAR]: this.VAR,
+            [Command_1.Command.ARR_NEW]: this.ARR_NEW,
+            [Command_1.Command.ARR_SET]: this.ARR_SET,
+            [Command_1.Command.ARR_PUSH]: this.ARR_PUSH
         };
     }
     execute(programLine) {
         const cmd = programLine.cmd;
         if (cmd) {
             this.ptm.logExecution(programLine);
-            this.validator.programLine = programLine;
+            this.intp.programLine = programLine;
             const commandFunction = this.commandDict[cmd];
-            commandFunction(this.ptm, { validator: this.validator, param: programLine.params });
+            commandFunction(this.ptm, this.intp);
         }
         else {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
@@ -196,23 +199,23 @@ class CommandExecutor {
     DATA(ptm, intp) {
     }
     HALT(ptm, intp) {
-        intp.validator.argc(0);
+        intp.argc(0);
         ptm.stop("Halt requested");
     }
     RESET(ptm, intp) {
-        intp.validator.argc(0);
+        intp.argc(0);
         ptm.reset();
     }
     TITLE(ptm, intp) {
-        intp.validator.argc(1);
-        window.document.title = intp.param[0].text;
+        intp.argc(1);
+        window.document.title = intp.requireString(0);
     }
     SCREEN(ptm, intp) {
-        intp.validator.argc(4);
-        const width = intp.param[0].number;
-        const height = intp.param[1].number;
-        const hStretch = intp.param[2].number;
-        const vStretch = intp.param[3].number;
+        intp.argc(4);
+        const width = intp.requireNumber(0);
+        const height = intp.requireNumber(1);
+        const hStretch = intp.requireNumber(2);
+        const vStretch = intp.requireNumber(3);
         if (ptm.display) {
             ptm.display.reset();
         }
@@ -221,21 +224,53 @@ class CommandExecutor {
         }
     }
     GOTO(ptm, intp) {
-        intp.validator.argc(1);
-        const label = intp.param[0].text;
-        ptm.gotoLabel(label);
+        intp.argc(1);
+        const ixProgramLine = intp.requireLabelTarget(0);
+        ptm.gotoSubroutine(ixProgramLine);
     }
     CALL(ptm, intp) {
-        intp.validator.argc(1);
-        const label = intp.param[0].text;
-        ptm.callLabel(label);
+        intp.argc(1);
+        const ixProgramLine = intp.requireLabelTarget(0);
+        ptm.callSubroutine(ixProgramLine);
     }
     RET(ptm, intp) {
-        intp.validator.argc(0);
-        ptm.returnFromLabel();
+        intp.argc(0);
+        ptm.returnFromSubroutine();
     }
     VAR(ptm, intp) {
-        intp.validator.argc(2);
+        intp.argc(2);
+        const id = intp.requireId(0);
+        ptm.vars[id] = intp.requireString(1);
+    }
+    ARR_NEW(ptm, intp) {
+        const argc = intp.argcMinMax(1, 2);
+        const arrayId = intp.requireId(0);
+        let initialArrLen = 0;
+        if (argc > 1) {
+            initialArrLen = intp.requireNumber(1);
+        }
+        const arr = [];
+        if (initialArrLen > 0) {
+            for (let i = 0; i < initialArrLen; i++) {
+                arr.push("");
+            }
+        }
+        ptm.arrays[arrayId] = arr;
+    }
+    ARR_PUSH(ptm, intp) {
+        intp.argc(2);
+        const array = intp.requireExistingArray(0);
+        const value = intp.requireString(1);
+        array.push(value);
+    }
+    ARR_SET(ptm, intp) {
+        intp.argc(2);
+        const arraySubscript = intp.requireArraySubscript(0);
+        const arrayId = arraySubscript.arrayId;
+        const ix = arraySubscript.ix;
+        const arr = ptm.arrays[arrayId];
+        const value = intp.requireString(1);
+        arr[ix] = value;
     }
 }
 exports.CommandExecutor = CommandExecutor;
@@ -243,11 +278,19 @@ exports.CommandExecutor = CommandExecutor;
 },{"../Errors/PTM_RuntimeError":3,"../Graphics/Display":5,"../Parser/Command":9}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CommandValidator = void 0;
+exports.Interpreter = void 0;
 const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
 const Command_1 = require("../Parser/Command");
-class CommandValidator {
-    commandExists(cmd) {
+const ParamType_1 = require("../Parser/ParamType");
+class Interpreter {
+    constructor(ptm, program) {
+        this.ptm = ptm;
+        this.program = program;
+    }
+    static isValidIdentifier(id) {
+        return id.match(/^[$A-Z_][0-9A-Z._$]*$/i) !== null;
+    }
+    static commandExists(cmd) {
         return Object.values(Command_1.Command).includes(cmd);
     }
     argc(expectedArgc) {
@@ -261,18 +304,170 @@ class CommandValidator {
         if (actualArgc < min || actualArgc > max) {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Invalid parameter count. Expected from ${min} to ${max}, got ${actualArgc}`, this.programLine);
         }
+        return actualArgc;
+    }
+    getStringValueFromVariable(id) {
+        const value = this.ptm.vars[id];
+        if (value === undefined) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Variable not found: ${id}`, this.programLine);
+        }
+        return value;
+    }
+    getNumericValueFromVariable(id) {
+        const str = this.getStringValueFromVariable(id);
+        const num = Number(str);
+        if (Number.isNaN(num)) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Expected a number, got string: ${str}`, this.programLine);
+        }
+        return num;
+    }
+    getStringValueFromArrayElement(param) {
+        if (!param.arrayAccess || !param.arrayAccess.arrayId) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Array access expected`, this.programLine);
+        }
+        const arrayId = param.arrayAccess.arrayId;
+        const arr = this.ptm.arrays[arrayId];
+        if (arr === undefined) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Array not found: ${arrayId}`, this.programLine);
+        }
+        if (param.type === ParamType_1.ParamType.ArrayIxLiteral) {
+            const ix = param.arrayAccess.ixLiteral;
+            if (ix !== undefined && ix !== null) {
+                const value = arr[ix];
+                if (value === undefined) {
+                    throw new PTM_RuntimeError_1.PTM_RuntimeError(`Index out of bounds for array ${arrayId}: ${ix}`, this.programLine);
+                }
+                return value;
+            }
+        }
+        else if (param.type === ParamType_1.ParamType.ArrayIxVarIdentifier) {
+            const ixVar = param.arrayAccess.ixVariable;
+            if (ixVar) {
+                const ix = this.getNumericValueFromVariable(ixVar);
+                if (ix !== undefined && ix !== null) {
+                    const value = arr[ix];
+                    if (value === undefined) {
+                        throw new PTM_RuntimeError_1.PTM_RuntimeError(`Index out of bounds for array ${arrayId}: ${ix}`, this.programLine);
+                    }
+                    return value;
+                }
+            }
+        }
+        throw new PTM_RuntimeError_1.PTM_RuntimeError(`Could not get string from array element`, this.programLine);
+    }
+    getNumericValueFromArrayElement(param) {
+        const str = this.getStringValueFromArrayElement(param);
+        const num = Number(str);
+        if (Number.isNaN(num)) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Expected a number, got string: ${str}`, this.programLine);
+        }
+        return num;
+    }
+    requireId(paramIx) {
+        const param = this.programLine.params[paramIx];
+        if (param.type !== ParamType_1.ParamType.Identifier) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Identifier expected: ${param.src}`, this.programLine);
+        }
+        return param.text;
+    }
+    requireString(paramIx) {
+        const param = this.programLine.params[paramIx];
+        if (param.type === ParamType_1.ParamType.StringLiteral) {
+            return param.text;
+        }
+        else if (param.type === ParamType_1.ParamType.CharLiteral) {
+            return param.text;
+        }
+        else if (param.type === ParamType_1.ParamType.NumberLiteral) {
+            return param.text;
+        }
+        else if (param.type === ParamType_1.ParamType.Identifier) {
+            return this.getStringValueFromVariable(param.text);
+        }
+        else if (param.type === ParamType_1.ParamType.ArrayIxLiteral || param.type === ParamType_1.ParamType.ArrayIxVarIdentifier) {
+            return this.getStringValueFromArrayElement(param);
+        }
+        else {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Could not get string from parameter`, this.programLine);
+        }
+    }
+    requireNumber(paramIx) {
+        const param = this.programLine.params[paramIx];
+        if (param.type === ParamType_1.ParamType.StringLiteral) {
+            return param.number;
+        }
+        else if (param.type === ParamType_1.ParamType.CharLiteral) {
+            return param.number;
+        }
+        else if (param.type === ParamType_1.ParamType.NumberLiteral) {
+            return param.number;
+        }
+        else if (param.type === ParamType_1.ParamType.Identifier) {
+            return this.getNumericValueFromVariable(param.text);
+        }
+        else if (param.type === ParamType_1.ParamType.ArrayIxLiteral || param.type === ParamType_1.ParamType.ArrayIxVarIdentifier) {
+            return this.getNumericValueFromArrayElement(param);
+        }
+        else {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Could not get number from parameter`, this.programLine);
+        }
+    }
+    requireLabelTarget(paramIx) {
+        const label = this.programLine.params[paramIx].text;
+        const prgLineIx = this.program.labels[label];
+        if (prgLineIx === undefined) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Label not found: ${label}`, this.programLine);
+        }
+        return prgLineIx;
+    }
+    requireExistingArray(paramIx) {
+        const arrayId = this.programLine.params[paramIx].text;
+        const arr = this.ptm.arrays[arrayId];
+        if (arr === undefined) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Array not found: ${arrayId}`, this.programLine);
+        }
+        return arr;
+    }
+    requireArraySubscript(paramIx) {
+        const param = this.programLine.params[paramIx];
+        if (param.arrayAccess && param.arrayAccess.arrayId) {
+            let subscript = { arrayId: "", ix: -1 };
+            if (param.type === ParamType_1.ParamType.ArrayIxLiteral && param.arrayAccess.ixLiteral !== null && param.arrayAccess.ixLiteral !== undefined) {
+                subscript = {
+                    arrayId: param.arrayAccess.arrayId,
+                    ix: param.arrayAccess.ixLiteral
+                };
+            }
+            else if (param.type === ParamType_1.ParamType.ArrayIxVarIdentifier && param.arrayAccess.ixVariable) {
+                subscript = {
+                    arrayId: param.arrayAccess.arrayId,
+                    ix: this.getNumericValueFromVariable(param.arrayAccess.ixVariable)
+                };
+            }
+            const arr = this.ptm.arrays[subscript.arrayId];
+            const ix = subscript.ix;
+            if (arr === undefined) {
+                throw new PTM_RuntimeError_1.PTM_RuntimeError(`Array not found: ${subscript.arrayId}`, this.programLine);
+            }
+            const value = arr[ix];
+            if (value === undefined) {
+                throw new PTM_RuntimeError_1.PTM_RuntimeError(`Index out of bounds for array ${subscript.arrayId}: ${ix}`, this.programLine);
+            }
+            return subscript;
+        }
+        throw new PTM_RuntimeError_1.PTM_RuntimeError(`Array access expected: ${param.src}`, this.programLine);
     }
 }
-exports.CommandValidator = CommandValidator;
+exports.Interpreter = Interpreter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/Command":9}],8:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/Command":9,"../Parser/ParamType":13}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
 const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
 const Parser_1 = require("./Parser/Parser");
 const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
-const CommandValidator_1 = require("./Interpreter/CommandValidator");
+const Interpreter_1 = require("./Interpreter/Interpreter");
 const PTM_RuntimeError_1 = require("./Errors/PTM_RuntimeError");
 document.addEventListener("DOMContentLoaded", () => {
     console.log("%c" +
@@ -296,15 +491,17 @@ class PTM {
     constructor(displayElement, srcPtml) {
         this.displayElement = displayElement;
         this.display = null;
-        this.validator = new CommandValidator_1.CommandValidator();
-        this.executor = new CommandExecutor_1.CommandExecutor(this, this.validator);
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
+        this.intp = new Interpreter_1.Interpreter(this, this.program);
+        this.executor = new CommandExecutor_1.CommandExecutor(this, this.intp);
         this.intervalLength = 255;
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
         this.callStack = [];
+        this.vars = {};
+        this.arrays = {};
         this.intervalId = this.start();
     }
     logInfo(msg) {
@@ -354,29 +551,18 @@ class PTM {
         this.programPtr = 0;
         this.branching = true;
         (_a = this.display) === null || _a === void 0 ? void 0 : _a.reset();
+        this.callStack = [];
     }
-    gotoLabel(label) {
-        const prgLineIx = this.program.labels[label];
-        if (prgLineIx !== undefined) {
-            this.programPtr = prgLineIx;
-            this.branching = true;
-        }
-        else {
-            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Label not found: ${label}`, this.currentLine);
-        }
+    gotoSubroutine(ixProgramLine) {
+        this.programPtr = ixProgramLine;
+        this.branching = true;
     }
-    callLabel(label) {
-        const prgLineIx = this.program.labels[label];
-        if (prgLineIx !== undefined) {
-            this.callStack.push(this.programPtr + 1);
-            this.programPtr = prgLineIx;
-            this.branching = true;
-        }
-        else {
-            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Label not found: ${label}`, this.currentLine);
-        }
+    callSubroutine(ixProgramLine) {
+        this.callStack.push(this.programPtr + 1);
+        this.programPtr = ixProgramLine;
+        this.branching = true;
     }
-    returnFromLabel() {
+    returnFromSubroutine() {
         if (this.callStack.length > 0) {
             this.programPtr = this.callStack.pop();
             this.branching = true;
@@ -388,7 +574,7 @@ class PTM {
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Interpreter/CommandExecutor":6,"./Interpreter/CommandValidator":7,"./Parser/Parser":14}],9:[function(require,module,exports){
+},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Interpreter/CommandExecutor":6,"./Interpreter/Interpreter":7,"./Parser/Parser":14}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Command = void 0;
@@ -404,6 +590,9 @@ var Command;
     Command["CALL"] = "CALL";
     Command["RET"] = "RET";
     Command["VAR"] = "VAR";
+    Command["ARR_NEW"] = "ARR.NEW";
+    Command["ARR_SET"] = "ARR.SET";
+    Command["ARR_PUSH"] = "ARR.PUSH";
 })(Command = exports.Command || (exports.Command = {}));
 
 },{}],10:[function(require,module,exports){
@@ -434,6 +623,7 @@ var NumberBase;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
 const PTM_ParseError_1 = require("../Errors/PTM_ParseError");
+const Interpreter_1 = require("../Interpreter/Interpreter");
 const NumberBase_1 = require("./NumberBase");
 const ParamType_1 = require("./ParamType");
 class Param {
@@ -441,24 +631,14 @@ class Param {
         this.numericBase = NumberBase_1.NumberBase.None;
         this.numericSign = "";
         this.programLine = programLine;
+        this.src = src;
         this.text = src;
         this.arrayAccess = null;
         this.type = this.parseType(src);
         this.text = this.maybeTransformText();
         this.number = this.tryParseNumber();
     }
-    toString() {
-        if (this.type === ParamType_1.ParamType.NumberLiteral) {
-            return ` ${this.number} (${this.type} | ${this.numericBase})`;
-        }
-        else {
-            return ` ${this.text} (${this.type})`;
-        }
-    }
     parseType(src) {
-        if (src.length === 0) {
-            return ParamType_1.ParamType.Empty;
-        }
         if (src.length > 1 && (src[0] === "-" || src[0] === "+")) {
             this.numericSign = src[0];
             src = src.substring(1);
@@ -478,10 +658,10 @@ class Param {
             this.numericBase = NumberBase_1.NumberBase.Binary;
             return ParamType_1.ParamType.NumberLiteral;
         }
-        else if (this.isValidIdentifier(src)) {
+        else if (Interpreter_1.Interpreter.isValidIdentifier(src)) {
             return ParamType_1.ParamType.Identifier;
         }
-        else if (src[0].match(/[0-9]/)) {
+        else if (src.match(/^[0-9]*$/)) {
             this.numericBase = NumberBase_1.NumberBase.Decimal;
             return ParamType_1.ParamType.NumberLiteral;
         }
@@ -491,7 +671,7 @@ class Param {
             if (ixLeftBrace > 0 && ixRightBrace > ixLeftBrace + 1) {
                 const id = src.substring(0, ixLeftBrace);
                 const subscript = src.substring(ixLeftBrace + 1, ixRightBrace);
-                if (this.isValidIdentifier(subscript)) {
+                if (Interpreter_1.Interpreter.isValidIdentifier(subscript)) {
                     this.arrayAccess = {
                         arrayId: id,
                         ixLiteral: null,
@@ -513,10 +693,7 @@ class Param {
                 }
             }
         }
-        throw new PTM_ParseError_1.PTM_ParseError(`Could not parse parameter: ${src}`, this.programLine);
-    }
-    isValidIdentifier(src) {
-        return src.match(/^[$A-Z_][0-9A-Z._$]*$/i) !== null;
+        throw new PTM_ParseError_1.PTM_ParseError(`Syntax error: ${src}`, this.programLine);
     }
     maybeTransformText() {
         if (this.type === ParamType_1.ParamType.StringLiteral) {
@@ -579,13 +756,12 @@ Param.BinPrefix = "&B";
 Param.ArrayLeftBrace = "[";
 Param.ArrayRightBrace = "]";
 
-},{"../Errors/PTM_ParseError":2,"./NumberBase":11,"./ParamType":13}],13:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":7,"./NumberBase":11,"./ParamType":13}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
 var ParamType;
 (function (ParamType) {
-    ParamType["Empty"] = "Empty";
     ParamType["NumberLiteral"] = "NumberLiteral";
     ParamType["CharLiteral"] = "CharLiteral";
     ParamType["StringLiteral"] = "StringLiteral";
@@ -599,6 +775,7 @@ var ParamType;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
 const PTM_ParseError_1 = require("../Errors/PTM_ParseError");
+const Interpreter_1 = require("../Interpreter/Interpreter");
 const Command_1 = require("./Command");
 const ExecutionTime_1 = require("./ExecutionTime");
 const Param_1 = require("./Param");
@@ -675,7 +852,7 @@ class Parser {
             cmdName = src;
         }
         cmdName = cmdName.toUpperCase();
-        if (this.ptm.validator.commandExists(cmdName)) {
+        if (Interpreter_1.Interpreter.commandExists(cmdName)) {
             return cmdName;
         }
         else {
@@ -740,7 +917,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"./Command":9,"./ExecutionTime":10,"./Param":12,"./Program":15,"./ProgramLine":16,"./ProgramLineType":17}],15:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":7,"./Command":9,"./ExecutionTime":10,"./Param":12,"./Program":15,"./ProgramLine":16,"./ProgramLineType":17}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;

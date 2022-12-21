@@ -1,4 +1,5 @@
 import { PTM_ParseError } from "../Errors/PTM_ParseError";
+import { Interpreter } from "../Interpreter/Interpreter";
 import { ArrayAccess } from "./ArrayAccess";
 import { NumberBase } from "./NumberBase";
 import { ParamType } from "./ParamType";
@@ -6,6 +7,7 @@ import { ProgramLine } from "./ProgramLine";
 
 export class Param {
 
+    src: string;
     type: ParamType;
     text: string;
     number: number;
@@ -24,6 +26,7 @@ export class Param {
 
     constructor(programLine: ProgramLine, src: string) {
         this.programLine = programLine;
+        this.src = src;
         this.text = src;
         this.arrayAccess = null;
         this.type = this.parseType(src);
@@ -31,18 +34,7 @@ export class Param {
         this.number = this.tryParseNumber();
     }
 
-    toString(): string {
-        if (this.type === ParamType.NumberLiteral) {
-            return ` ${this.number} (${this.type} | ${this.numericBase})`;
-        } else {
-            return ` ${this.text} (${this.type})`;
-        }
-    }
-
     private parseType(src: string): ParamType {
-        if (src.length === 0) {
-            return ParamType.Empty;
-        }
         if (src.length > 1 && (src[0] === "-" || src[0] === "+")) {
             this.numericSign = src[0];
             src = src.substring(1);
@@ -59,9 +51,9 @@ export class Param {
         } else if (srcPrefix === Param.BinPrefix) {
             this.numericBase = NumberBase.Binary;
             return ParamType.NumberLiteral;
-        } else if (this.isValidIdentifier(src)) {
+        } else if (Interpreter.isValidIdentifier(src)) {
             return ParamType.Identifier;
-        } else if (src[0].match(/[0-9]/)) {
+        } else if (src.match(/^[0-9]*$/)) {
             this.numericBase = NumberBase.Decimal;
             return ParamType.NumberLiteral;
         } else if (src[0].match(/[a-z]/i)) {
@@ -70,7 +62,7 @@ export class Param {
             if (ixLeftBrace > 0 && ixRightBrace > ixLeftBrace + 1) {
                 const id = src.substring(0, ixLeftBrace);
                 const subscript = src.substring(ixLeftBrace + 1, ixRightBrace);
-                if (this.isValidIdentifier(subscript)) {
+                if (Interpreter.isValidIdentifier(subscript)) {
                     this.arrayAccess = {
                         arrayId: id,
                         ixLiteral: null,
@@ -91,11 +83,7 @@ export class Param {
                 }
             } 
         }
-        throw new PTM_ParseError(`Could not parse parameter: ${src}`, this.programLine);
-    }
-
-    private isValidIdentifier(src: string): boolean {
-        return src.match(/^[$A-Z_][0-9A-Z._$]*$/i) !== null;
+        throw new PTM_ParseError(`Syntax error: ${src}`, this.programLine);
     }
 
     private maybeTransformText(): string {

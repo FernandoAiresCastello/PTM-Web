@@ -2,10 +2,12 @@ import { PTM_InitializationError } from "./Errors/PTM_InitializationError";
 import { Parser } from "./Parser/Parser";
 import { Program } from "./Parser/Program";
 import { CommandExecutor } from "./Interpreter/CommandExecutor";
-import { CommandValidator } from "./Interpreter/CommandValidator";
+import { Interpreter } from "./Interpreter/Interpreter";
 import { ProgramLine } from "./Parser/ProgramLine";
 import { Display } from "./Graphics/Display";
 import { PTM_RuntimeError } from "./Errors/PTM_RuntimeError";
+import { Variables } from "./Interpreter/Variables";
+import { Arrays } from "./Interpreter/Arrays";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -35,31 +37,35 @@ document.addEventListener("DOMContentLoaded", () => {
 export class PTM {
 
     readonly executor: CommandExecutor;
-    readonly validator: CommandValidator;
+    readonly intp: Interpreter;
     private readonly parser: Parser;
     private readonly program: Program;
     private readonly intervalLength: number;
     private programPtr: number;
     private intervalId: number;
     private branching: boolean;
-    displayElement: HTMLElement;
-    display: Display | null;
     private currentLine: ProgramLine | null;
     private callStack: number[];
+    displayElement: HTMLElement;
+    display: Display | null;
+    vars: Variables;
+    arrays: Arrays;
 
     constructor(displayElement: HTMLElement,  srcPtml: string) {
 
         this.displayElement = displayElement;
         this.display = null;
-        this.validator = new CommandValidator();
-        this.executor = new CommandExecutor(this, this.validator);
         this.parser = new Parser(this, srcPtml);
         this.program = this.parser.parse();
+        this.intp = new Interpreter(this, this.program);
+        this.executor = new CommandExecutor(this, this.intp);
         this.intervalLength = 255;
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
         this.callStack = [];
+        this.vars = {};
+        this.arrays = {};
         this.intervalId = this.start();
     }
 
@@ -110,27 +116,18 @@ export class PTM {
         this.programPtr = 0;
         this.branching = true;
         this.display?.reset();
+        this.callStack = [];
     }
 
-    gotoSubroutine(label: string) {
-        const prgLineIx = this.program.labels[label];
-        if (prgLineIx !== undefined) {
-            this.programPtr = prgLineIx;
-            this.branching = true;
-        } else {
-            throw new PTM_RuntimeError(`Label not found: ${label}`, this.currentLine!);
-        }
+    gotoSubroutine(ixProgramLine: number) {
+        this.programPtr = ixProgramLine;
+        this.branching = true;
     }
 
-    callSubroutine(label: string) {
-        const prgLineIx = this.program.labels[label];
-        if (prgLineIx !== undefined) {
-            this.callStack.push(this.programPtr + 1);
-            this.programPtr = prgLineIx;
-            this.branching = true;
-        } else {
-            throw new PTM_RuntimeError(`Label not found: ${label}`, this.currentLine!);
-        }
+    callSubroutine(ixProgramLine: number) {
+        this.callStack.push(this.programPtr + 1);
+        this.programPtr = ixProgramLine;
+        this.branching = true;
     }
 
     returnFromSubroutine() {

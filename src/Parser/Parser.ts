@@ -1,4 +1,5 @@
 import { PTM_ParseError } from "../Errors/PTM_ParseError";
+import { Interpreter } from "../Interpreter/Interpreter";
 import { PTM } from "../PTM";
 import { Command } from "./Command";
 import { ExecutionTime } from "./ExecutionTime";
@@ -78,7 +79,7 @@ export class Parser {
             cmdName = src;
         }
         cmdName = cmdName.toUpperCase();
-        if (this.ptm.validator.commandExists(cmdName)) {
+        if (Interpreter.commandExists(cmdName)) {
             return cmdName as Command;
         } else {
             throw new PTM_ParseError(`Command not recognized: ${cmdName}`, line);
