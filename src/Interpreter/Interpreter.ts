@@ -25,6 +25,10 @@ export class Interpreter {
         return Object.values(Command).includes(cmd as Command);
     }
 
+    arg(paramIx: number): Param {
+        return this.programLine.params[paramIx];
+    }
+
     argc(expectedArgc: number) {
         const actualArgc = this.programLine.params.length;
         if (actualArgc && actualArgc !== expectedArgc) {
@@ -108,6 +112,15 @@ export class Interpreter {
         return param.text;
     }
 
+    requireExistingVariable(paramIx: number): string {
+        const varId = this.requireId(paramIx);
+        const value = this.ptm.vars[varId];
+        if (value === undefined) {
+            throw new PTM_RuntimeError(`Variable not found: ${varId}`, this.programLine);
+        }
+        return varId;
+    }
+
     requireString(paramIx: number): string {
         const param = this.programLine.params[paramIx];
         if (param.type === ParamType.StringLiteral) {
@@ -149,6 +162,12 @@ export class Interpreter {
             throw new PTM_RuntimeError(`Label not found: ${label}`, this.programLine);
         }
         return prgLineIx;
+    }
+
+    isArray(paramIx: number): boolean {
+        const arrayId = this.programLine.params[paramIx].text;
+        const arr = this.ptm.arrays[arrayId];
+        return arr !== undefined;
     }
 
     requireExistingArray(paramIx: number): string[] {

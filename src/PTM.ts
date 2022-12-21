@@ -51,7 +51,7 @@ export class PTM {
     vars: Variables;
     arrays: Arrays;
 
-    constructor(displayElement: HTMLElement,  srcPtml: string) {
+    constructor(displayElement: HTMLElement, srcPtml: string) {
 
         this.displayElement = displayElement;
         this.display = null;
@@ -71,6 +71,23 @@ export class PTM {
 
     logInfo(msg: string) {
         console.log(msg);
+    }
+
+    logDebug(id: string, value: string | string[]) {
+        let msg = "%c";
+        if (Array.isArray(value)) {
+            msg += "[";
+            for (let i = 0; i < value.length; i++) {
+                msg += `"${value[i]}"`;
+                if (i < value.length - 1) {
+                    msg += ", ";
+                }
+            }
+            msg += "]";
+        } else {
+            msg += value;
+        }
+        console.log(msg, "color:#0ff");
     }
 
     logExecution(programLine: ProgramLine) {
@@ -117,6 +134,8 @@ export class PTM {
         this.branching = true;
         this.display?.reset();
         this.callStack = [];
+        this.vars = {};
+        this.arrays = {};
     }
 
     gotoSubroutine(ixProgramLine: number) {

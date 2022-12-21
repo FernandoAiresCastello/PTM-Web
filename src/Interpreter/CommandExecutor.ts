@@ -5,6 +5,7 @@ import { CommandDictionary } from "./CommandDictionary";
 import { ProgramLine } from "../Parser/ProgramLine";
 import { Command } from "../Parser/Command";
 import { Display } from "../Graphics/Display";
+import { ParamType } from "../Parser/ParamType";
 
 export class CommandExecutor {
 
@@ -21,6 +22,7 @@ export class CommandExecutor {
     private initCommands() {
         return {
             [Command.TEST]: this.TEST,
+            [Command.DBG]: this.DBG,
             [Command.DATA]: this.DATA,
             [Command.HALT]: this.HALT,
             [Command.RESET]: this.RESET,
@@ -32,7 +34,8 @@ export class CommandExecutor {
             [Command.VAR]: this.VAR,
             [Command.ARR_NEW]: this.ARR_NEW,
             [Command.ARR_SET]: this.ARR_SET,
-            [Command.ARR_PUSH]: this.ARR_PUSH
+            [Command.ARR_PUSH]: this.ARR_PUSH,
+            [Command.INC]: this.INC
         };
     }
 
@@ -49,6 +52,19 @@ export class CommandExecutor {
     }
 
     TEST(ptm: PTM, intp: Interpreter) {
+    }
+
+    DBG(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        if (intp.isArray(0)) {
+            const arrId = intp.arg(0).text;
+            const arr = intp.requireExistingArray(0);
+            ptm.logDebug(arrId, arr);
+        } else {
+            const varId = intp.arg(0).text;
+            const value = intp.requireString(0);
+            ptm.logDebug(varId, value);
+        }
     }
 
     DATA(ptm: PTM, intp: Interpreter) {
@@ -139,4 +155,11 @@ export class CommandExecutor {
         const value = intp.requireString(1);
         arr[ix] = value;
     }
+
+    INC(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const varId = intp.requireExistingVariable(0);
+        const value = intp.requireNumber(0);
+        ptm.vars[varId] = (value + 1).toString();
+    }    
 }

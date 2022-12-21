@@ -1,6 +1,7 @@
 export enum Command {
     
     TEST = "TEST",
+    DBG = "DBG",
     DATA = "DATA",
     HALT = "HALT",
     RESET = "RESET",
@@ -13,4 +14,5 @@ export enum Command {
     ARR_NEW = "ARR.NEW",
     ARR_SET = "ARR.SET",
     ARR_PUSH = "ARR.PUSH",
+    INC = "INC"
 }

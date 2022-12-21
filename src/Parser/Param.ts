@@ -91,12 +91,13 @@ export class Param {
             return this.unenclose(this.text);
         } else if (this.type === ParamType.CharLiteral) {
             if (this.text.length === 3) {
-                return this.unenclose(this.text);
+                const char = this.unenclose(this.text);
+                return char.charCodeAt(0).toString();
             } else {
                 throw new PTM_ParseError(`Invalid character literal: ${this.text}`, this.programLine);
             }
         } else if (this.type == ParamType.NumberLiteral) {
-            return this.text;
+            return this.tryParseNumber().toString();
         }
         return this.text;
     }

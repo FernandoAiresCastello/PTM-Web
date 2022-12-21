@@ -168,6 +168,7 @@ class CommandExecutor {
     initCommands() {
         return {
             [Command_1.Command.TEST]: this.TEST,
+            [Command_1.Command.DBG]: this.DBG,
             [Command_1.Command.DATA]: this.DATA,
             [Command_1.Command.HALT]: this.HALT,
             [Command_1.Command.RESET]: this.RESET,
@@ -179,7 +180,8 @@ class CommandExecutor {
             [Command_1.Command.VAR]: this.VAR,
             [Command_1.Command.ARR_NEW]: this.ARR_NEW,
             [Command_1.Command.ARR_SET]: this.ARR_SET,
-            [Command_1.Command.ARR_PUSH]: this.ARR_PUSH
+            [Command_1.Command.ARR_PUSH]: this.ARR_PUSH,
+            [Command_1.Command.INC]: this.INC
         };
     }
     execute(programLine) {
@@ -195,6 +197,19 @@ class CommandExecutor {
         }
     }
     TEST(ptm, intp) {
+    }
+    DBG(ptm, intp) {
+        intp.argc(1);
+        if (intp.isArray(0)) {
+            const arrId = intp.arg(0).text;
+            const arr = intp.requireExistingArray(0);
+            ptm.logDebug(arrId, arr);
+        }
+        else {
+            const varId = intp.arg(0).text;
+            const value = intp.requireString(0);
+            ptm.logDebug(varId, value);
+        }
     }
     DATA(ptm, intp) {
     }
@@ -272,6 +287,12 @@ class CommandExecutor {
         const value = intp.requireString(1);
         arr[ix] = value;
     }
+    INC(ptm, intp) {
+        intp.argc(1);
+        const varId = intp.requireExistingVariable(0);
+        const value = intp.requireNumber(0);
+        ptm.vars[varId] = (value + 1).toString();
+    }
 }
 exports.CommandExecutor = CommandExecutor;
 
@@ -292,6 +313,9 @@ class Interpreter {
     }
     static commandExists(cmd) {
         return Object.values(Command_1.Command).includes(cmd);
+    }
+    arg(paramIx) {
+        return this.programLine.params[paramIx];
     }
     argc(expectedArgc) {
         const actualArgc = this.programLine.params.length;
@@ -370,6 +394,14 @@ class Interpreter {
         }
         return param.text;
     }
+    requireExistingVariable(paramIx) {
+        const varId = this.requireId(paramIx);
+        const value = this.ptm.vars[varId];
+        if (value === undefined) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Variable not found: ${varId}`, this.programLine);
+        }
+        return varId;
+    }
     requireString(paramIx) {
         const param = this.programLine.params[paramIx];
         if (param.type === ParamType_1.ParamType.StringLiteral) {
@@ -419,6 +451,11 @@ class Interpreter {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Label not found: ${label}`, this.programLine);
         }
         return prgLineIx;
+    }
+    isArray(paramIx) {
+        const arrayId = this.programLine.params[paramIx].text;
+        const arr = this.ptm.arrays[arrayId];
+        return arr !== undefined;
     }
     requireExistingArray(paramIx) {
         const arrayId = this.programLine.params[paramIx].text;
@@ -507,6 +544,23 @@ class PTM {
     logInfo(msg) {
         console.log(msg);
     }
+    logDebug(id, value) {
+        let msg = "%c";
+        if (Array.isArray(value)) {
+            msg += "[";
+            for (let i = 0; i < value.length; i++) {
+                msg += `"${value[i]}"`;
+                if (i < value.length - 1) {
+                    msg += ", ";
+                }
+            }
+            msg += "]";
+        }
+        else {
+            msg += value;
+        }
+        console.log(msg, "color:#0ff");
+    }
     logExecution(programLine) {
         console.log(` ${programLine.lineNr}: %c${programLine.src}`, `color:#ff0`);
     }
@@ -552,6 +606,8 @@ class PTM {
         this.branching = true;
         (_a = this.display) === null || _a === void 0 ? void 0 : _a.reset();
         this.callStack = [];
+        this.vars = {};
+        this.arrays = {};
     }
     gotoSubroutine(ixProgramLine) {
         this.programPtr = ixProgramLine;
@@ -581,6 +637,7 @@ exports.Command = void 0;
 var Command;
 (function (Command) {
     Command["TEST"] = "TEST";
+    Command["DBG"] = "DBG";
     Command["DATA"] = "DATA";
     Command["HALT"] = "HALT";
     Command["RESET"] = "RESET";
@@ -593,6 +650,7 @@ var Command;
     Command["ARR_NEW"] = "ARR.NEW";
     Command["ARR_SET"] = "ARR.SET";
     Command["ARR_PUSH"] = "ARR.PUSH";
+    Command["INC"] = "INC";
 })(Command = exports.Command || (exports.Command = {}));
 
 },{}],10:[function(require,module,exports){
@@ -701,14 +759,15 @@ class Param {
         }
         else if (this.type === ParamType_1.ParamType.CharLiteral) {
             if (this.text.length === 3) {
-                return this.unenclose(this.text);
+                const char = this.unenclose(this.text);
+                return char.charCodeAt(0).toString();
             }
             else {
                 throw new PTM_ParseError_1.PTM_ParseError(`Invalid character literal: ${this.text}`, this.programLine);
             }
         }
         else if (this.type == ParamType_1.ParamType.NumberLiteral) {
-            return this.text;
+            return this.tryParseNumber().toString();
         }
         return this.text;
     }
