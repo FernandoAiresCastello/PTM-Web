@@ -10,6 +10,7 @@ import { Variables } from "./Interpreter/Variables";
 import { Arrays } from "./Interpreter/Arrays";
 import { Palette } from "./Graphics/Palette";
 import { Tileset } from "./Graphics/Tileset";
+import { DisplayManager } from "./Graphics/DisplayManager";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -46,6 +47,7 @@ export class PTM {
     palette: Palette;
     tileset: Tileset;
     display: Display | null;
+    displayMgr: DisplayManager | null;
     vars: Variables;
     arrays: Arrays;
 
@@ -64,6 +66,7 @@ export class PTM {
 
         this.displayElement = displayElement;
         this.display = null;
+        this.displayMgr = null;
         this.parser = new Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter(this, this.program);
@@ -168,6 +171,17 @@ export class PTM {
             this.branching = true;
         } else {
             throw new PTM_RuntimeError("Call stack is empty", this.currentLine!);
+        }
+    }
+
+    createDisplay(width: number, height: number, hStretch: number, vStretch: number) {
+        if (this.display && this.displayMgr) {
+            this.display.reset();
+            this.displayMgr.reset();
+        } else {
+            this.display = new Display(this.displayElement, 
+                width, height, hStretch, vStretch, this.palette, this.tileset);
+            this.displayMgr = new DisplayManager(this.display);
         }
     }
 }

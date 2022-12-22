@@ -92,19 +92,11 @@ export class CommandExecutor {
 
     SCREEN(ptm: PTM, intp: Interpreter) {
         intp.argc(4);
-
         const width = intp.requireNumber(0);
         const height = intp.requireNumber(1);
         const hStretch = intp.requireNumber(2);
         const vStretch = intp.requireNumber(3);
-
-        if (ptm.display) {
-            ptm.display.reset();
-        } else {
-            ptm.display = new Display(ptm.displayElement, 
-                width, height, hStretch, vStretch,
-                ptm.palette, ptm.tileset);
-        }
+        ptm.createDisplay(width, height, hStretch, vStretch);
     }
 
     GOTO(ptm: PTM, intp: Interpreter) {

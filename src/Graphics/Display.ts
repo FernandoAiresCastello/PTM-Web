@@ -2,6 +2,7 @@ import { PTM_InitializationError } from "../Errors/PTM_InitializationError";
 import { CanvasPoint } from "./CanvasPoint";
 import { ColorString, PaletteIndex } from "./ColorTypes";
 import { Palette } from "./Palette";
+import { PixelBlock } from "./PixelBlock";
 import { Tileset } from "./Tileset";
 
 export class Display {
@@ -9,6 +10,8 @@ export class Display {
     readonly palette: Palette;
     readonly tileset: Tileset;
     backColorIx: PaletteIndex = 0;
+    readonly cols: number;
+    readonly rows: number;
 
     private canvasElement: HTMLCanvasElement;
     private canvas: CanvasRenderingContext2D;
@@ -34,6 +37,8 @@ export class Display {
         this.pixelHeight = pixelHeight;
         this.canvasWidth = bufWidth * pixelWidth;
         this.canvasHeight = bufHeight * pixelHeight;
+        this.cols = bufWidth / PixelBlock.Width;
+        this.rows = bufHeight / PixelBlock.Height;
         this.palette = palette;
         this.tileset = tileset;
 
