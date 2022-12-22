@@ -60,7 +60,8 @@ exports.Display = void 0;
 const PTM_InitializationError_1 = require("../Errors/PTM_InitializationError");
 const CanvasPoint_1 = require("./CanvasPoint");
 class Display {
-    constructor(parentElement, bufWidth, bufHeight, pixelWidth, pixelHeight) {
+    constructor(parentElement, bufWidth, bufHeight, pixelWidth, pixelHeight, palette, tileset) {
+        this.backColorIx = 0;
         this.pixelBufWidth = bufWidth;
         this.pixelBufHeight = bufHeight;
         this.pixelBufSize = bufWidth * bufHeight;
@@ -68,6 +69,8 @@ class Display {
         this.pixelHeight = pixelHeight;
         this.canvasWidth = bufWidth * pixelWidth;
         this.canvasHeight = bufHeight * pixelHeight;
+        this.palette = palette;
+        this.tileset = tileset;
         this.canvasElement = document.createElement("canvas");
         this.canvasElement.width = this.canvasWidth;
         this.canvasElement.height = this.canvasHeight;
@@ -81,23 +84,7 @@ class Display {
         this.canvas.imageSmoothingQuality = 'low';
         this.pixelPositions = this.calculatePixelPositions();
         this.pixels = [];
-        this.clearPixels(Display.DefaultBackgroundColor);
-        this.update();
-    }
-    reset() {
-        this.clearPixels(Display.DefaultBackgroundColor);
-        this.update();
-    }
-    clearPixels(rgb) {
-        for (let pos = 0; pos < this.pixelBufSize; pos++) {
-            this.putPixelRgbLinear(pos, rgb);
-        }
-    }
-    putPixelRgbLinear(pos, rgb) {
-        this.pixels[pos] = rgb;
-    }
-    putPixelRgb(x, y, rgb) {
-        this.pixels[y * this.pixelBufWidth + x] = rgb;
+        this.reset();
     }
     update() {
         for (let i = 0; i < this.pixelPositions.length; i++) {
@@ -105,6 +92,29 @@ class Display {
             this.canvas.fillStyle = this.pixels[pos.index];
             this.canvas.fillRect(pos.x, pos.y, this.pixelWidth, this.pixelHeight);
         }
+    }
+    reset() {
+        this.backColorIx = 0;
+        this.clearToBackColor();
+        this.update();
+    }
+    clearToBackColor() {
+        this.clearToColor(this.backColorIx);
+    }
+    clearToColor(ix) {
+        const color = this.palette.get(ix);
+        this.clearToColorRgb(color);
+    }
+    clearToColorRgb(color) {
+        for (let pos = 0; pos < this.pixelBufSize; pos++) {
+            this.setPixelRgbLinear(pos, color);
+        }
+    }
+    setPixelRgbLinear(pos, color) {
+        this.pixels[pos] = color;
+    }
+    setPixelRgb(x, y, color) {
+        this.pixels[y * this.pixelBufWidth + x] = color;
     }
     calculatePixelPositions() {
         const positions = [];
@@ -120,39 +130,138 @@ class Display {
         }
         return positions;
     }
-    // === Frame rendering tests ===
-    test1() {
-        this.clearPixels('#ffff00');
-        this.putPixelRgb(0, 0, '#ff0000');
-        for (let x = 0; x < this.pixelBufWidth; x++) {
-            this.putPixelRgb(x, 0, '#ff0000');
-            this.putPixelRgb(x, this.pixelBufHeight - 1, '#ff0000');
-        }
-        for (let y = 0; y < this.pixelBufHeight; y++) {
-            this.putPixelRgb(0, y, '#ff0000');
-            this.putPixelRgb(this.pixelBufWidth - 1, y, '#ff0000');
-        }
-        this.update();
-    }
-    test2() {
-        for (let pos = 0; pos < this.pixelBufSize; pos++) {
-            let color = '';
-            const rnd = Math.floor(Math.random() * 3);
-            if (rnd == 0)
-                color = '#ff0000';
-            else if (rnd == 1)
-                color = '#00ff00';
-            else if (rnd == 2)
-                color = '#0000ff';
-            this.putPixelRgbLinear(pos, color);
-        }
-        this.update();
-    }
 }
 exports.Display = Display;
-Display.DefaultBackgroundColor = "#000000";
 
 },{"../Errors/PTM_InitializationError":1,"./CanvasPoint":4}],6:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Palette = void 0;
+class Palette {
+    constructor() {
+        this.colors = this.init(256, "#000000");
+        this.set(0, "#000000");
+        this.set(1, "#ffffff");
+    }
+    init(numberOfColors, defaultColor) {
+        this.colors = [];
+        for (let i = 0; i < numberOfColors; i++) {
+            this.colors.push(defaultColor);
+        }
+        return this.colors;
+    }
+    set(ix, color) {
+        this.colors[ix] = color;
+    }
+    get(ix) {
+        return this.colors[ix];
+    }
+    size() {
+        return this.colors.length;
+    }
+}
+exports.Palette = Palette;
+
+},{}],7:[function(require,module,exports){
+"use strict";
+var _a;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PixelBlock = void 0;
+class PixelBlock {
+    constructor() {
+        this.pixels = "";
+        this.clear();
+    }
+    clear() {
+        this.pixels = "";
+        for (let i = 0; i < PixelBlock.Size; i++) {
+            this.pixels += PixelBlock.PixelOff;
+        }
+    }
+    toString() {
+        return this.pixels;
+    }
+    getPixelRowsAsNumbers() {
+        let bytes = [];
+        for (let row = 0; row < PixelBlock.Height; row++) {
+            bytes.push(this.getPixelRowAsNumber(row));
+        }
+        return bytes;
+    }
+    getPixelRowAsNumber(pixelRow) {
+        const binary = this.getPixelRowAsBinaryString(pixelRow);
+        const rowPixels = Number.parseInt(binary, 2);
+        return rowPixels;
+    }
+    getPixelRowAsBinaryString(pixelRow) {
+        const bitIndex = pixelRow * PixelBlock.Width;
+        let binary = "";
+        for (let i = bitIndex; i < bitIndex + PixelBlock.Width; i++) {
+            binary += this.pixels[i];
+        }
+        return binary;
+    }
+    getPixelRowsAsBinaryStrings() {
+        let str = [];
+        for (let row = 0; row < PixelBlock.Height; row++) {
+            str.push(this.getPixelRowAsBinaryString(row));
+        }
+        return str;
+    }
+}
+exports.PixelBlock = PixelBlock;
+_a = PixelBlock;
+PixelBlock.Width = 8;
+PixelBlock.Height = 8;
+PixelBlock.Size = _a.Width * _a.Height;
+PixelBlock.PixelOn = '1';
+PixelBlock.PixelOff = '0';
+
+},{}],8:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Tileset = void 0;
+const PixelBlock_1 = require("./PixelBlock");
+class Tileset {
+    constructor() {
+        this.tiles = this.init(256);
+    }
+    init(numberOfTiles) {
+        this.tiles = [];
+        for (let i = 0; i < numberOfTiles; i++) {
+            this.tiles.push(new PixelBlock_1.PixelBlock());
+        }
+        return this.tiles;
+    }
+    set(ix, tile) {
+        this.tiles[ix] = tile;
+    }
+    setPixelRow(ix, pixelRow, byte) {
+        const tile = this.tiles[ix];
+        const bitIndex = pixelRow * PixelBlock_1.PixelBlock.Width;
+        let currentPixels = tile.pixels;
+        let newPixels = "";
+        const binaryRow = byte.toString(2).padStart(PixelBlock_1.PixelBlock.Width);
+        for (let i = 0; i < currentPixels.length; i++) {
+            if (i >= bitIndex && i < bitIndex + PixelBlock_1.PixelBlock.Width) {
+                newPixels += binaryRow[i % PixelBlock_1.PixelBlock.Width];
+            }
+            else {
+                newPixels += currentPixels[i];
+            }
+        }
+        tile.pixels = newPixels;
+    }
+    get(ix) {
+        return this.tiles[ix];
+    }
+    size() {
+        return this.tiles.length;
+    }
+}
+exports.Tileset = Tileset;
+
+},{"./PixelBlock":7}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommandExecutor = void 0;
@@ -181,7 +290,13 @@ class CommandExecutor {
             [Command_1.Command.ARR_NEW]: this.ARR_NEW,
             [Command_1.Command.ARR_SET]: this.ARR_SET,
             [Command_1.Command.ARR_PUSH]: this.ARR_PUSH,
-            [Command_1.Command.INC]: this.INC
+            [Command_1.Command.INC]: this.INC,
+            [Command_1.Command.DEC]: this.DEC,
+            [Command_1.Command.CLS]: this.CLS,
+            [Command_1.Command.PAL]: this.PAL,
+            [Command_1.Command.CHR]: this.CHR,
+            [Command_1.Command.WCOL]: this.WCOL,
+            [Command_1.Command.VSYNC]: this.VSYNC,
         };
     }
     execute(programLine) {
@@ -235,7 +350,7 @@ class CommandExecutor {
             ptm.display.reset();
         }
         else {
-            ptm.display = new Display_1.Display(ptm.displayElement, width, height, hStretch, vStretch);
+            ptm.display = new Display_1.Display(ptm.displayElement, width, height, hStretch, vStretch, ptm.palette, ptm.tileset);
         }
     }
     GOTO(ptm, intp) {
@@ -293,10 +408,48 @@ class CommandExecutor {
         const value = intp.requireNumber(0);
         ptm.vars[varId] = (value + 1).toString();
     }
+    DEC(ptm, intp) {
+        intp.argc(1);
+        const varId = intp.requireExistingVariable(0);
+        const value = intp.requireNumber(0);
+        ptm.vars[varId] = (value - 1).toString();
+    }
+    PAL(ptm, intp) {
+        intp.argc(2);
+        const ix = intp.requirePaletteIndex(0);
+        const color = intp.requireColor(1);
+        ptm.palette.set(ix, color);
+    }
+    CHR(ptm, intp) {
+        intp.argc(3);
+        const ix = intp.requireTilesetIndex(0);
+        const pixelRow = intp.requireNumber(1);
+        const byte = intp.requireNumber(2);
+        ptm.tileset.setPixelRow(ix, pixelRow, byte);
+    }
+    CLS(ptm, intp) {
+        intp.argc(0);
+        if (ptm.display) {
+            ptm.display.clearToBackColor();
+        }
+    }
+    WCOL(ptm, intp) {
+        intp.argc(1);
+        const ix = intp.requirePaletteIndex(0);
+        if (ptm.display) {
+            ptm.display.backColorIx = ix;
+        }
+    }
+    VSYNC(ptm, intp) {
+        intp.argc(0);
+        if (ptm.display) {
+            ptm.display.update();
+        }
+    }
 }
 exports.CommandExecutor = CommandExecutor;
 
-},{"../Errors/PTM_RuntimeError":3,"../Graphics/Display":5,"../Parser/Command":9}],7:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Graphics/Display":5,"../Parser/Command":12}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Interpreter = void 0;
@@ -444,6 +597,25 @@ class Interpreter {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Could not get number from parameter`, this.programLine);
         }
     }
+    requirePaletteIndex(paramIx) {
+        const paletteIx = this.requireNumber(paramIx);
+        if (paletteIx >= 0 && paletteIx < this.ptm.palette.size()) {
+            return paletteIx;
+        }
+        throw new PTM_RuntimeError_1.PTM_RuntimeError(`Palette index out of bounds: ${paletteIx}`, this.programLine);
+    }
+    requireTilesetIndex(paramIx) {
+        const tilesetIx = this.requireNumber(paramIx);
+        if (tilesetIx >= 0 && tilesetIx < this.ptm.tileset.size()) {
+            return tilesetIx;
+        }
+        throw new PTM_RuntimeError_1.PTM_RuntimeError(`Tileset index out of bounds: ${tilesetIx}`, this.programLine);
+    }
+    requireColor(paramIx) {
+        const rgb = this.requireNumber(paramIx);
+        const color = "#" + rgb.toString(16).padStart(6, "0");
+        return color;
+    }
     requireLabelTarget(paramIx) {
         const label = this.programLine.params[paramIx].text;
         const prgLineIx = this.program.labels[label];
@@ -497,7 +669,7 @@ class Interpreter {
 }
 exports.Interpreter = Interpreter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/Command":9,"../Parser/ParamType":13}],8:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/Command":12,"../Parser/ParamType":16}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
@@ -506,6 +678,8 @@ const Parser_1 = require("./Parser/Parser");
 const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
 const Interpreter_1 = require("./Interpreter/Interpreter");
 const PTM_RuntimeError_1 = require("./Errors/PTM_RuntimeError");
+const Palette_1 = require("./Graphics/Palette");
+const Tileset_1 = require("./Graphics/Tileset");
 document.addEventListener("DOMContentLoaded", () => {
     console.log("%c" +
         "=======================================================\n" +
@@ -526,19 +700,24 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 class PTM {
     constructor(displayElement, srcPtml) {
+        this.logDebugFormat = "color:#0ff";
+        this.logExecFormat = "color:#ff0";
+        this.trace = false;
+        this.intervalLength = 1;
         this.displayElement = displayElement;
         this.display = null;
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter_1.Interpreter(this, this.program);
         this.executor = new CommandExecutor_1.CommandExecutor(this, this.intp);
-        this.intervalLength = 255;
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
         this.callStack = [];
         this.vars = {};
         this.arrays = {};
+        this.palette = new Palette_1.Palette();
+        this.tileset = new Tileset_1.Tileset();
         this.intervalId = this.start();
     }
     logInfo(msg) {
@@ -559,10 +738,12 @@ class PTM {
         else {
             msg += value;
         }
-        console.log(msg, "color:#0ff");
+        console.log(msg, this.logDebugFormat);
     }
     logExecution(programLine) {
-        console.log(` ${programLine.lineNr}: %c${programLine.src}`, `color:#ff0`);
+        if (this.trace) {
+            console.log(` ${programLine.lineNr}: %c${programLine.src}`, this.logExecFormat);
+        }
     }
     start() {
         this.logInfo("Interpreter started");
@@ -591,13 +772,11 @@ class PTM {
     }
     stop(reason) {
         window.clearInterval(this.intervalId);
-        const msg = "Interpreter exited";
+        let msg = "Interpreter exited";
         if (reason) {
-            console.log(`${msg}\n%cReason: ${reason}`, "color:#888");
+            msg += `\nReason: ${reason}`;
         }
-        else {
-            console.log(msg);
-        }
+        console.log(msg);
     }
     reset() {
         var _a;
@@ -608,6 +787,8 @@ class PTM {
         this.callStack = [];
         this.vars = {};
         this.arrays = {};
+        this.palette = new Palette_1.Palette();
+        this.tileset = new Tileset_1.Tileset();
     }
     gotoSubroutine(ixProgramLine) {
         this.programPtr = ixProgramLine;
@@ -630,7 +811,7 @@ class PTM {
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Interpreter/CommandExecutor":6,"./Interpreter/Interpreter":7,"./Parser/Parser":14}],9:[function(require,module,exports){
+},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Graphics/Palette":6,"./Graphics/Tileset":8,"./Interpreter/CommandExecutor":9,"./Interpreter/Interpreter":10,"./Parser/Parser":17}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Command = void 0;
@@ -651,9 +832,15 @@ var Command;
     Command["ARR_SET"] = "ARR.SET";
     Command["ARR_PUSH"] = "ARR.PUSH";
     Command["INC"] = "INC";
+    Command["DEC"] = "DEC";
+    Command["PAL"] = "PAL";
+    Command["CHR"] = "CHR";
+    Command["WCOL"] = "WCOL";
+    Command["CLS"] = "CLS";
+    Command["VSYNC"] = "VSYNC";
 })(Command = exports.Command || (exports.Command = {}));
 
-},{}],10:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -664,7 +851,7 @@ var ExecutionTime;
     ExecutionTime["RunTime"] = "RunTime";
 })(ExecutionTime = exports.ExecutionTime || (exports.ExecutionTime = {}));
 
-},{}],11:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NumberBase = void 0;
@@ -676,7 +863,7 @@ var NumberBase;
     NumberBase["Binary"] = "Binary";
 })(NumberBase = exports.NumberBase || (exports.NumberBase = {}));
 
-},{}],12:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
@@ -815,7 +1002,7 @@ Param.BinPrefix = "&B";
 Param.ArrayLeftBrace = "[";
 Param.ArrayRightBrace = "]";
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":7,"./NumberBase":11,"./ParamType":13}],13:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":10,"./NumberBase":14,"./ParamType":16}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
@@ -829,7 +1016,7 @@ var ParamType;
     ParamType["ArrayIxVarIdentifier"] = "ArrayIxVarIdentifier";
 })(ParamType = exports.ParamType || (exports.ParamType = {}));
 
-},{}],14:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
@@ -976,7 +1163,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":7,"./Command":9,"./ExecutionTime":10,"./Param":12,"./Program":15,"./ProgramLine":16,"./ProgramLineType":17}],15:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":10,"./Command":12,"./ExecutionTime":13,"./Param":15,"./Program":18,"./ProgramLine":19,"./ProgramLineType":20}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;
@@ -997,7 +1184,7 @@ class Program {
 }
 exports.Program = Program;
 
-},{}],16:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLine = void 0;
@@ -1018,7 +1205,7 @@ class ProgramLine {
 }
 exports.ProgramLine = ProgramLine;
 
-},{"./ExecutionTime":10,"./ProgramLineType":17}],17:[function(require,module,exports){
+},{"./ExecutionTime":13,"./ProgramLineType":20}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLineType = void 0;
@@ -1030,4 +1217,4 @@ var ProgramLineType;
     ProgramLineType["Label"] = "Label";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}]},{},[8]);
+},{}]},{},[11]);

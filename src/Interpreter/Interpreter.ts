@@ -1,4 +1,5 @@
 import { PTM_RuntimeError } from "../Errors/PTM_RuntimeError";
+import { ColorString } from "../Graphics/ColorTypes";
 import { PTM } from "../PTM";
 import { Command } from "../Parser/Command";
 import { Param } from "../Parser/Param";
@@ -153,6 +154,28 @@ export class Interpreter {
         } else {
             throw new PTM_RuntimeError(`Could not get number from parameter`, this.programLine);
         }
+    }
+
+    requirePaletteIndex(paramIx: number): number {
+        const paletteIx = this.requireNumber(paramIx);
+        if (paletteIx >= 0 && paletteIx < this.ptm.palette.size()) {
+            return paletteIx;
+        }
+        throw new PTM_RuntimeError(`Palette index out of bounds: ${paletteIx}`, this.programLine);
+    }
+
+    requireTilesetIndex(paramIx: number): number {
+        const tilesetIx = this.requireNumber(paramIx);
+        if (tilesetIx >= 0 && tilesetIx < this.ptm.tileset.size()) {
+            return tilesetIx;
+        }
+        throw new PTM_RuntimeError(`Tileset index out of bounds: ${tilesetIx}`, this.programLine);
+    }
+
+    requireColor(paramIx: number): ColorString {
+        const rgb = this.requireNumber(paramIx);
+        const color = "#" + rgb.toString(16).padStart(6, "0");
+        return color;
     }
 
     requireLabelTarget(paramIx: number): number {

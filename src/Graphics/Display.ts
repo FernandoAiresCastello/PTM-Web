@@ -1,9 +1,15 @@
 import { PTM_InitializationError } from "../Errors/PTM_InitializationError";
 import { CanvasPoint } from "./CanvasPoint";
+import { ColorString, PaletteIndex } from "./ColorTypes";
+import { Palette } from "./Palette";
+import { Tileset } from "./Tileset";
 
 export class Display {
 
-    static readonly DefaultBackgroundColor = "#000000";
+    readonly palette: Palette;
+    readonly tileset: Tileset;
+    backColorIx: PaletteIndex = 0;
+
     private canvasElement: HTMLCanvasElement;
     private canvas: CanvasRenderingContext2D;
     private canvasWidth: number;
@@ -11,12 +17,15 @@ export class Display {
     private pixelBufWidth: number;
     private pixelBufHeight: number;
     private pixelBufSize: number;
-    private pixels: string[];
+    private pixels: ColorString[];
     private pixelWidth: number;
     private pixelHeight: number;
     private pixelPositions: CanvasPoint[];
 
-    constructor(parentElement: HTMLElement, bufWidth: number, bufHeight: number, pixelWidth: number, pixelHeight: number) {
+    constructor(parentElement: HTMLElement, 
+        bufWidth: number, bufHeight: number, 
+        pixelWidth: number, pixelHeight: number, 
+        palette: Palette, tileset: Tileset) {
         
         this.pixelBufWidth = bufWidth;
         this.pixelBufHeight = bufHeight;
@@ -25,6 +34,8 @@ export class Display {
         this.pixelHeight = pixelHeight;
         this.canvasWidth = bufWidth * pixelWidth;
         this.canvasHeight = bufHeight * pixelHeight;
+        this.palette = palette;
+        this.tileset = tileset;
 
         this.canvasElement = document.createElement("canvas");
         this.canvasElement.width = this.canvasWidth;
@@ -40,35 +51,44 @@ export class Display {
         this.canvas.imageSmoothingQuality = 'low';
         this.pixelPositions = this.calculatePixelPositions();
         this.pixels = [];
-        this.clearPixels(Display.DefaultBackgroundColor);
-        this.update();
+        this.reset();
     }
 
-    reset() {
-        this.clearPixels(Display.DefaultBackgroundColor);
-        this.update();
-    }
-
-    private clearPixels(rgb: string) {
-        for (let pos = 0; pos < this.pixelBufSize; pos++) {
-            this.putPixelRgbLinear(pos, rgb);
-        }
-    }
-
-    private putPixelRgbLinear(pos: number, rgb: string) {
-        this.pixels[pos] = rgb;
-    }
-
-    private putPixelRgb(x: number, y: number, rgb: string) {
-        this.pixels[y * this.pixelBufWidth + x] = rgb;
-    }
-
-    private update() {
+    update() {
         for (let i = 0; i < this.pixelPositions.length; i++) {
             const pos = this.pixelPositions[i];
             this.canvas.fillStyle = this.pixels[pos.index];
             this.canvas.fillRect(pos.x, pos.y, this.pixelWidth, this.pixelHeight);
         }
+    }
+
+    reset() {
+        this.backColorIx = 0;
+        this.clearToBackColor();
+        this.update();
+    }
+
+    clearToBackColor() {
+        this.clearToColor(this.backColorIx);
+    }
+
+    private clearToColor(ix: PaletteIndex) {
+        const color = this.palette.get(ix);
+        this.clearToColorRgb(color);
+    }
+
+    private clearToColorRgb(color: ColorString) {
+        for (let pos = 0; pos < this.pixelBufSize; pos++) {
+            this.setPixelRgbLinear(pos, color);
+        }
+    }
+
+    private setPixelRgbLinear(pos: number, color: ColorString) {
+        this.pixels[pos] = color;
+    }
+
+    private setPixelRgb(x: number, y: number, color: ColorString) {
+        this.pixels[y * this.pixelBufWidth + x] = color;
     }
 
     private calculatePixelPositions() : CanvasPoint[] {
@@ -84,33 +104,5 @@ export class Display {
             }
         }
         return positions;
-    }
-
-    // === Frame rendering tests ===
-
-    private test1() {
-        this.clearPixels('#ffff00');
-        this.putPixelRgb(0, 0, '#ff0000');
-        for (let x = 0; x < this.pixelBufWidth; x++) {
-            this.putPixelRgb(x, 0, '#ff0000');
-            this.putPixelRgb(x, this.pixelBufHeight - 1, '#ff0000');
-        }
-        for (let y = 0; y < this.pixelBufHeight; y++) {
-            this.putPixelRgb(0, y, '#ff0000');
-            this.putPixelRgb(this.pixelBufWidth - 1, y, '#ff0000');
-        }
-        this.update();
-    }
-
-    private test2() {
-        for (let pos = 0; pos < this.pixelBufSize; pos++) {
-            let color = '';
-            const rnd = Math.floor(Math.random() * 3);
-            if (rnd == 0) color = '#ff0000';
-            else if (rnd == 1) color = '#00ff00';
-            else if (rnd == 2) color = '#0000ff';
-            this.putPixelRgbLinear(pos, color);
-        }
-        this.update();
     }
 }

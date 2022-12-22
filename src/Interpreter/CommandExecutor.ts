@@ -5,7 +5,6 @@ import { CommandDictionary } from "./CommandDictionary";
 import { ProgramLine } from "../Parser/ProgramLine";
 import { Command } from "../Parser/Command";
 import { Display } from "../Graphics/Display";
-import { ParamType } from "../Parser/ParamType";
 
 export class CommandExecutor {
 
@@ -35,7 +34,13 @@ export class CommandExecutor {
             [Command.ARR_NEW]: this.ARR_NEW,
             [Command.ARR_SET]: this.ARR_SET,
             [Command.ARR_PUSH]: this.ARR_PUSH,
-            [Command.INC]: this.INC
+            [Command.INC]: this.INC,
+            [Command.DEC]: this.DEC,
+            [Command.CLS]: this.CLS,
+            [Command.PAL]: this.PAL,
+            [Command.CHR]: this.CHR,
+            [Command.WCOL]: this.WCOL,
+            [Command.VSYNC]: this.VSYNC,
         };
     }
 
@@ -96,7 +101,9 @@ export class CommandExecutor {
         if (ptm.display) {
             ptm.display.reset();
         } else {
-            ptm.display = new Display(ptm.displayElement, width, height, hStretch, vStretch);
+            ptm.display = new Display(ptm.displayElement, 
+                width, height, hStretch, vStretch,
+                ptm.palette, ptm.tileset);
         }
     }
 
@@ -162,4 +169,48 @@ export class CommandExecutor {
         const value = intp.requireNumber(0);
         ptm.vars[varId] = (value + 1).toString();
     }    
+
+    DEC(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const varId = intp.requireExistingVariable(0);
+        const value = intp.requireNumber(0);
+        ptm.vars[varId] = (value - 1).toString();
+    }    
+
+    PAL(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const ix = intp.requirePaletteIndex(0);
+        const color = intp.requireColor(1);
+        ptm.palette.set(ix, color);
+    }
+
+    CHR(ptm: PTM, intp: Interpreter) {
+        intp.argc(3);
+        const ix = intp.requireTilesetIndex(0);
+        const pixelRow = intp.requireNumber(1);
+        const byte = intp.requireNumber(2);
+        ptm.tileset.setPixelRow(ix, pixelRow, byte);
+    }
+
+    CLS(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
+        if (ptm.display) {
+            ptm.display.clearToBackColor();
+        }
+    }
+
+    WCOL(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const ix = intp.requirePaletteIndex(0);
+        if (ptm.display) {
+            ptm.display.backColorIx = ix;
+        }
+    }
+
+    VSYNC(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
+        if (ptm.display) {
+            ptm.display.update();
+        }
+    }
 }

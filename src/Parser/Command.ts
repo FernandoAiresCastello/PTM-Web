@@ -14,5 +14,11 @@ export enum Command {
     ARR_NEW = "ARR.NEW",
     ARR_SET = "ARR.SET",
     ARR_PUSH = "ARR.PUSH",
-    INC = "INC"
+    INC = "INC",
+    DEC = "DEC",
+    PAL = "PAL",
+    CHR = "CHR",
+    WCOL = "WCOL",
+    CLS = "CLS",
+    VSYNC = "VSYNC",
 }

@@ -8,6 +8,8 @@ import { Display } from "./Graphics/Display";
 import { PTM_RuntimeError } from "./Errors/PTM_RuntimeError";
 import { Variables } from "./Interpreter/Variables";
 import { Arrays } from "./Interpreter/Arrays";
+import { Palette } from "./Graphics/Palette";
+import { Tileset } from "./Graphics/Tileset";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -36,20 +38,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
 export class PTM {
 
+    private readonly logDebugFormat = "color:#0ff";
+    private readonly logExecFormat = "color:#ff0";
+    private readonly trace: boolean = false;
+    private readonly intervalLength: number = 1;
+
+    palette: Palette;
+    tileset: Tileset;
+    display: Display | null;
+    vars: Variables;
+    arrays: Arrays;
+
     readonly executor: CommandExecutor;
     readonly intp: Interpreter;
     private readonly parser: Parser;
     private readonly program: Program;
-    private readonly intervalLength: number;
+    private readonly intervalId: number;
     private programPtr: number;
-    private intervalId: number;
     private branching: boolean;
     private currentLine: ProgramLine | null;
     private callStack: number[];
-    displayElement: HTMLElement;
-    display: Display | null;
-    vars: Variables;
-    arrays: Arrays;
+    readonly displayElement: HTMLElement;
 
     constructor(displayElement: HTMLElement, srcPtml: string) {
 
@@ -59,13 +68,14 @@ export class PTM {
         this.program = this.parser.parse();
         this.intp = new Interpreter(this, this.program);
         this.executor = new CommandExecutor(this, this.intp);
-        this.intervalLength = 255;
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
         this.callStack = [];
         this.vars = {};
         this.arrays = {};
+        this.palette = new Palette();
+        this.tileset = new Tileset();
         this.intervalId = this.start();
     }
 
@@ -87,11 +97,13 @@ export class PTM {
         } else {
             msg += value;
         }
-        console.log(msg, "color:#0ff");
+        console.log(msg, this.logDebugFormat);
     }
 
     logExecution(programLine: ProgramLine) {
-        console.log(` ${programLine.lineNr}: %c${programLine.src}`, `color:#ff0`);
+        if (this.trace) {
+            console.log(` ${programLine.lineNr}: %c${programLine.src}`, this.logExecFormat);
+        }
     }
 
     start(): number {
@@ -120,12 +132,11 @@ export class PTM {
 
     stop(reason?: string) {
         window.clearInterval(this.intervalId);
-        const msg = "Interpreter exited";
+        let msg = "Interpreter exited";
         if (reason) {
-            console.log(`${msg}\n%cReason: ${reason}`, "color:#888");
-        } else {
-            console.log(msg);
+            msg += `\nReason: ${reason}`;
         }
+        console.log(msg);
     }
 
     reset() {
@@ -136,6 +147,8 @@ export class PTM {
         this.callStack = [];
         this.vars = {};
         this.arrays = {};
+        this.palette = new Palette();
+        this.tileset = new Tileset();
     }
 
     gotoSubroutine(ixProgramLine: number) {

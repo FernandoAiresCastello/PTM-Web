@@ -7,24 +7,15 @@
 <div id="display"></div>
 <script type="text/ptml">
 
-    SCREEN 256,195,3,3
-    ARR.NEW arr
-    ARR.PUSH arr,"First"
-    ARR.PUSH arr,"Second"
-    DBG arr
-    VAR x,0
-    ARR.NEW fruits,5
-    ARR.SET fruits[x],123
-    INC x
-    ARR.SET fruits[x],&hff
-    INC x
-    ARR.SET fruits[x],"Hello, World!"
-    INC x
-    ARR.SET fruits[x],&b10101010
-    INC x
-    ARR.SET fruits[x],arr[1];
-    INC x
-    DBG fruits
+    SCREEN 256,192,3,3
+    CHR 0,0,&b11111111
+    CHR 0,1,&b10000001
+    CHR 0,2,&b10000001
+    CHR 0,3,&b10000001
+    CHR 0,4,&b10000001
+    CHR 0,5,&b10000001
+    CHR 0,6,&b10000001
+    CHR 0,7,&b11111111
 
 </script>
 </body>
