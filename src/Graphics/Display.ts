@@ -1,113 +1,69 @@
-import { PTM_InitializationError } from "../Errors/PTM_InitializationError";
-import { CanvasPoint } from "./CanvasPoint";
-import { ColorString, PaletteIndex } from "./ColorTypes";
+import { DisplayBase } from "./DisplayBase";
 import { Palette } from "./Palette";
-import { PixelBlock } from "./PixelBlock";
+import { TileBuffer } from "./TileBuffer";
 import { Tileset } from "./Tileset";
 
 export class Display {
 
-    readonly palette: Palette;
-    readonly tileset: Tileset;
-    backColorIx: PaletteIndex = 0;
-    readonly cols: number;
-    readonly rows: number;
+    private readonly base: DisplayBase;
+    private buffers: TileBuffer[];
 
-    private canvasElement: HTMLCanvasElement;
-    private canvas: CanvasRenderingContext2D;
-    private canvasWidth: number;
-    private canvasHeight: number;
-    private pixelBufWidth: number;
-    private pixelBufHeight: number;
-    private pixelBufSize: number;
-    private pixels: ColorString[];
-    private pixelWidth: number;
-    private pixelHeight: number;
-    private pixelPositions: CanvasPoint[];
+    constructor(displayElement: HTMLElement, 
+        width: number, height: number, hStretch: number, vStretch: number, palette: Palette, tileset: Tileset) {
 
-    constructor(parentElement: HTMLElement, 
-        bufWidth: number, bufHeight: number, 
-        pixelWidth: number, pixelHeight: number, 
-        palette: Palette, tileset: Tileset) {
-        
-        this.pixelBufWidth = bufWidth;
-        this.pixelBufHeight = bufHeight;
-        this.pixelBufSize = bufWidth * bufHeight;
-        this.pixelWidth = pixelWidth;
-        this.pixelHeight = pixelHeight;
-        this.canvasWidth = bufWidth * pixelWidth;
-        this.canvasHeight = bufHeight * pixelHeight;
-        this.cols = bufWidth / PixelBlock.Width;
-        this.rows = bufHeight / PixelBlock.Height;
-        this.palette = palette;
-        this.tileset = tileset;
-
-        this.canvasElement = document.createElement("canvas");
-        this.canvasElement.width = this.canvasWidth;
-        this.canvasElement.height = this.canvasHeight;
-        parentElement.append(this.canvasElement);
-
-        let ctx = this.canvasElement.getContext("2d");
-        if (ctx === null) {
-            throw new PTM_InitializationError("Unable to create CanvasRenderingContext2D");
-        }
-        this.canvas = ctx;
-        this.canvas.imageSmoothingEnabled = false;
-        this.canvas.imageSmoothingQuality = 'low';
-        this.pixelPositions = this.calculatePixelPositions();
-        this.pixels = [];
-        this.reset();
+        this.base = new DisplayBase(displayElement, width, height, hStretch, vStretch, palette, tileset);
+        this.buffers = [];
+        this.createDefaultBuffer();
     }
 
-    update() {
-        for (let i = 0; i < this.pixelPositions.length; i++) {
-            const pos = this.pixelPositions[i];
-            this.canvas.fillStyle = this.pixels[pos.index];
-            this.canvas.fillRect(pos.x, pos.y, this.pixelWidth, this.pixelHeight);
-        }
+    private createDefaultBuffer() {
+        this.createNewBuffer("default", 1, this.base.cols, this.base.rows, 0, 0);
+    }
+
+    createNewBuffer(id: string, layers: number, w: number, h: number, dispX: number, dispY: number): TileBuffer {
+        const buf = new TileBuffer(id, layers, w, h);
+        buf.view.displayX = dispX;
+        buf.view.displayY = dispY;
+        this.buffers.push(buf);
+        return buf;
+    }
+
+    deleteAllBuffers() {
+        this.buffers = [];
     }
 
     reset() {
-        this.backColorIx = 0;
-        this.clearToBackColor();
-        this.update();
+        this.base.reset();
+        this.deleteAllBuffers();
+        this.createDefaultBuffer();
     }
 
-    clearToBackColor() {
-        this.clearToColor(this.backColorIx);
+    setBackColorIx(ix: number) {
+        this.base.backColorIx = ix;
     }
 
-    private clearToColor(ix: PaletteIndex) {
-        const color = this.palette.get(ix);
-        this.clearToColorRgb(color);
-    }
-
-    private clearToColorRgb(color: ColorString) {
-        for (let pos = 0; pos < this.pixelBufSize; pos++) {
-            this.setPixelRgbLinear(pos, color);
+    clearAllBuffers() {
+        for (let i = 0; i < this.buffers.length; i++) {
+            this.buffers[i].clearAllLayers();
         }
     }
-
-    private setPixelRgbLinear(pos: number, color: ColorString) {
-        this.pixels[pos] = color;
+    
+    update() {
+        this.base.clearToBackColor();
+        this.drawVisibleBuffers();
+        this.base.update();
     }
 
-    private setPixelRgb(x: number, y: number, color: ColorString) {
-        this.pixels[y * this.pixelBufWidth + x] = color;
-    }
-
-    private calculatePixelPositions() : CanvasPoint[] {
-        const positions = [];
-        let canvasX = 0;
-        let canvasY = 0;
-        for (let pixelBufIndex = 0; pixelBufIndex < this.pixelBufSize; pixelBufIndex++) {
-            positions.push(new CanvasPoint(canvasX, canvasY, pixelBufIndex));
-            canvasX += this.pixelWidth;
-            if (canvasX >= this.canvasWidth) {
-                canvasX = 0;
-                canvasY += this.pixelHeight;
+    private drawVisibleBuffers() {
+        for (let i = 0; i < this.buffers.length; i++) {
+            const buf = this.buffers[i];
+            if (buf.visible) {
+                this.drawBuffer(buf);
             }
         }
-        return positions;
+    }
+
+    private drawBuffer(buf: TileBuffer) {
+
     }
 }

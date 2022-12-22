@@ -4,13 +4,13 @@ import { Program } from "./Parser/Program";
 import { CommandExecutor } from "./Interpreter/CommandExecutor";
 import { Interpreter } from "./Interpreter/Interpreter";
 import { ProgramLine } from "./Parser/ProgramLine";
-import { Display } from "./Graphics/Display";
+import { DisplayBase } from "./Graphics/DisplayBase";
 import { PTM_RuntimeError } from "./Errors/PTM_RuntimeError";
 import { Variables } from "./Interpreter/Variables";
 import { Arrays } from "./Interpreter/Arrays";
 import { Palette } from "./Graphics/Palette";
 import { Tileset } from "./Graphics/Tileset";
-import { DisplayManager } from "./Graphics/DisplayManager";
+import { Display } from "./Graphics/Display";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -47,7 +47,6 @@ export class PTM {
     palette: Palette;
     tileset: Tileset;
     display: Display | null;
-    displayMgr: DisplayManager | null;
     vars: Variables;
     arrays: Arrays;
 
@@ -66,7 +65,6 @@ export class PTM {
 
         this.displayElement = displayElement;
         this.display = null;
-        this.displayMgr = null;
         this.parser = new Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter(this, this.program);
@@ -175,13 +173,11 @@ export class PTM {
     }
 
     createDisplay(width: number, height: number, hStretch: number, vStretch: number) {
-        if (this.display && this.displayMgr) {
+        if (this.display) {
             this.display.reset();
-            this.displayMgr.reset();
         } else {
             this.display = new Display(this.displayElement, 
                 width, height, hStretch, vStretch, this.palette, this.tileset);
-            this.displayMgr = new DisplayManager(this.display);
         }
     }
 }

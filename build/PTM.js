@@ -57,10 +57,66 @@ exports.CanvasPoint = CanvasPoint;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Display = void 0;
+const DisplayBase_1 = require("./DisplayBase");
+const TileBuffer_1 = require("./TileBuffer");
+class Display {
+    constructor(displayElement, width, height, hStretch, vStretch, palette, tileset) {
+        this.base = new DisplayBase_1.DisplayBase(displayElement, width, height, hStretch, vStretch, palette, tileset);
+        this.buffers = [];
+        this.createDefaultBuffer();
+    }
+    createDefaultBuffer() {
+        this.createNewBuffer("default", 1, this.base.cols, this.base.rows, 0, 0);
+    }
+    createNewBuffer(id, layers, w, h, dispX, dispY) {
+        const buf = new TileBuffer_1.TileBuffer(id, layers, w, h);
+        buf.view.displayX = dispX;
+        buf.view.displayY = dispY;
+        this.buffers.push(buf);
+        return buf;
+    }
+    deleteAllBuffers() {
+        this.buffers = [];
+    }
+    reset() {
+        this.base.reset();
+        this.deleteAllBuffers();
+        this.createDefaultBuffer();
+    }
+    setBackColorIx(ix) {
+        this.base.backColorIx = ix;
+    }
+    clearAllBuffers() {
+        for (let i = 0; i < this.buffers.length; i++) {
+            this.buffers[i].clearAllLayers();
+        }
+    }
+    update() {
+        this.base.clearToBackColor();
+        this.drawVisibleBuffers();
+        this.base.update();
+    }
+    drawVisibleBuffers() {
+        for (let i = 0; i < this.buffers.length; i++) {
+            const buf = this.buffers[i];
+            if (buf.visible) {
+                this.drawBuffer(buf);
+            }
+        }
+    }
+    drawBuffer(buf) {
+    }
+}
+exports.Display = Display;
+
+},{"./DisplayBase":6,"./TileBuffer":10}],6:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.DisplayBase = void 0;
 const PTM_InitializationError_1 = require("../Errors/PTM_InitializationError");
 const CanvasPoint_1 = require("./CanvasPoint");
 const PixelBlock_1 = require("./PixelBlock");
-class Display {
+class DisplayBase {
     constructor(parentElement, bufWidth, bufHeight, pixelWidth, pixelHeight, palette, tileset) {
         this.backColorIx = 0;
         this.pixelBufWidth = bufWidth;
@@ -134,40 +190,9 @@ class Display {
         return positions;
     }
 }
-exports.Display = Display;
+exports.DisplayBase = DisplayBase;
 
-},{"../Errors/PTM_InitializationError":1,"./CanvasPoint":4,"./PixelBlock":8}],6:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.DisplayManager = void 0;
-const TileBuffer_1 = require("./TileBuffer");
-class DisplayManager {
-    constructor(display) {
-        this.display = display;
-        this.buffers = [];
-        this.createDefaultBuffer();
-    }
-    createDefaultBuffer() {
-        this.createNewBuffer("default", 1, this.display.cols, this.display.rows, 0, 0);
-    }
-    createNewBuffer(id, layers, w, h, dispX, dispY) {
-        const buf = new TileBuffer_1.TileBuffer(id, layers, w, h);
-        buf.view.displayX = dispX;
-        buf.view.displayY = dispY;
-        this.buffers.push(buf);
-        return buf;
-    }
-    deleteAllBuffers() {
-        this.buffers = [];
-    }
-    reset() {
-        this.deleteAllBuffers();
-        this.createDefaultBuffer();
-    }
-}
-exports.DisplayManager = DisplayManager;
-
-},{"./TileBuffer":10}],7:[function(require,module,exports){
+},{"../Errors/PTM_InitializationError":1,"./CanvasPoint":4,"./PixelBlock":8}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Palette = void 0;
@@ -575,14 +600,14 @@ class CommandExecutor {
     CLS(ptm, intp) {
         intp.argc(0);
         if (ptm.display) {
-            ptm.display.clearToBackColor();
+            ptm.display.clearAllBuffers();
         }
     }
     WCOL(ptm, intp) {
         intp.argc(1);
         const ix = intp.requirePaletteIndex(0);
         if (ptm.display) {
-            ptm.display.backColorIx = ix;
+            ptm.display.setBackColorIx(ix);
         }
     }
     VSYNC(ptm, intp) {
@@ -822,11 +847,10 @@ const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
 const Parser_1 = require("./Parser/Parser");
 const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
 const Interpreter_1 = require("./Interpreter/Interpreter");
-const Display_1 = require("./Graphics/Display");
 const PTM_RuntimeError_1 = require("./Errors/PTM_RuntimeError");
 const Palette_1 = require("./Graphics/Palette");
 const Tileset_1 = require("./Graphics/Tileset");
-const DisplayManager_1 = require("./Graphics/DisplayManager");
+const Display_1 = require("./Graphics/Display");
 document.addEventListener("DOMContentLoaded", () => {
     console.log("%c" +
         "=======================================================\n" +
@@ -853,7 +877,6 @@ class PTM {
         this.intervalLength = 1;
         this.displayElement = displayElement;
         this.display = null;
-        this.displayMgr = null;
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter_1.Interpreter(this, this.program);
@@ -957,19 +980,17 @@ class PTM {
         }
     }
     createDisplay(width, height, hStretch, vStretch) {
-        if (this.display && this.displayMgr) {
+        if (this.display) {
             this.display.reset();
-            this.displayMgr.reset();
         }
         else {
             this.display = new Display_1.Display(this.displayElement, width, height, hStretch, vStretch, this.palette, this.tileset);
-            this.displayMgr = new DisplayManager_1.DisplayManager(this.display);
         }
     }
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Graphics/Display":5,"./Graphics/DisplayManager":6,"./Graphics/Palette":7,"./Graphics/Tileset":13,"./Interpreter/CommandExecutor":15,"./Interpreter/Interpreter":16,"./Parser/Parser":23}],18:[function(require,module,exports){
+},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Graphics/Display":5,"./Graphics/Palette":7,"./Graphics/Tileset":13,"./Interpreter/CommandExecutor":15,"./Interpreter/Interpreter":16,"./Parser/Parser":23}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Command = void 0;

@@ -4,7 +4,7 @@ import { Interpreter } from "./Interpreter";
 import { CommandDictionary } from "./CommandDictionary";
 import { ProgramLine } from "../Parser/ProgramLine";
 import { Command } from "../Parser/Command";
-import { Display } from "../Graphics/Display";
+import { DisplayBase } from "../Graphics/DisplayBase";
 
 export class CommandExecutor {
 
@@ -187,7 +187,7 @@ export class CommandExecutor {
     CLS(ptm: PTM, intp: Interpreter) {
         intp.argc(0);
         if (ptm.display) {
-            ptm.display.clearToBackColor();
+            ptm.display.clearAllBuffers();
         }
     }
 
@@ -195,7 +195,7 @@ export class CommandExecutor {
         intp.argc(1);
         const ix = intp.requirePaletteIndex(0);
         if (ptm.display) {
-            ptm.display.backColorIx = ix;
+            ptm.display.setBackColorIx(ix);
         }
     }
 
