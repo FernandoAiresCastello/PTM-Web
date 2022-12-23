@@ -96,6 +96,9 @@ class Display {
         this.drawVisibleBuffers();
         this.base.update();
     }
+    drawTileFrame(tile, x, y, transparent) {
+        this.base.drawTileFrame(tile, x, y, transparent);
+    }
     drawVisibleBuffers() {
         for (let i = 0; i < this.buffers.length; i++) {
             const buf = this.buffers[i];
@@ -105,6 +108,20 @@ class Display {
         }
     }
     drawBuffer(buf) {
+        for (let i = 0; i < buf.layerCount; i++) {
+            const layer = buf.layers[i];
+            this.drawBufferLayer(layer, buf.view);
+        }
+    }
+    drawBufferLayer(layer, view) {
+        let x = view.displayX;
+        let y = view.displayY;
+        for (let i = 0; i < layer.size; i++) {
+            const tile = layer.tiles[i];
+            if (tile.isEmpty()) {
+                continue;
+            }
+        }
     }
 }
 exports.Display = Display;
@@ -159,6 +176,29 @@ class DisplayBase {
     }
     clearToBackColor() {
         this.clearToColor(this.backColorIx);
+    }
+    drawTileFrame(tile, x, y, transparent) {
+        x *= PixelBlock_1.PixelBlock.Width;
+        y *= PixelBlock_1.PixelBlock.Height;
+        const px = x;
+        const xmax = x + PixelBlock_1.PixelBlock.Width;
+        const pixelBlock = this.tileset.get(tile.ix);
+        for (let i = 0; i < pixelBlock.pixels.length; i++) {
+            const pixel = pixelBlock.pixels[i];
+            const fgc = this.palette.get(tile.fgc);
+            const bgc = this.palette.get(tile.bgc);
+            if (pixel === PixelBlock_1.PixelBlock.PixelOn) {
+                this.setPixelRgb(x, y, fgc);
+            }
+            else if (pixel === PixelBlock_1.PixelBlock.PixelOff && !transparent) {
+                this.setPixelRgb(x, y, bgc);
+            }
+            x++;
+            if (x >= xmax) {
+                x = px;
+                y++;
+            }
+        }
     }
     clearToColor(ix) {
         const color = this.palette.get(ix);
@@ -374,6 +414,9 @@ class TileSeq {
         this.deleteAll();
         this.add(ix, fgc, bgc);
     }
+    isEmpty() {
+        return this.frames.length === 0;
+    }
 }
 exports.TileSeq = TileSeq;
 
@@ -443,6 +486,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommandExecutor = void 0;
 const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
 const Command_1 = require("../Parser/Command");
+const Tile_1 = require("../Graphics/Tile");
 class CommandExecutor {
     constructor(ptm, intp) {
         this.ptm = ptm;
@@ -472,6 +516,7 @@ class CommandExecutor {
             [Command_1.Command.CHR]: this.CHR,
             [Command_1.Command.WCOL]: this.WCOL,
             [Command_1.Command.VSYNC]: this.VSYNC,
+            [Command_1.Command.OUT]: this.OUT,
         };
     }
     execute(programLine) {
@@ -616,10 +661,24 @@ class CommandExecutor {
             ptm.display.update();
         }
     }
+    OUT(ptm, intp) {
+        intp.argc(6);
+        const ch = intp.requireNumber(0);
+        const fgc = intp.requireNumber(1);
+        const bgc = intp.requireNumber(2);
+        const x = intp.requireNumber(3);
+        const y = intp.requireNumber(4);
+        const transp = intp.requireNumber(5) > 0;
+        const tile = new Tile_1.Tile();
+        tile.set(ch, fgc, bgc);
+        if (ptm.display) {
+            ptm.display.drawTileFrame(tile, x, y, transp);
+        }
+    }
 }
 exports.CommandExecutor = CommandExecutor;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/Command":18}],16:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Graphics/Tile":9,"../Parser/Command":18}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Interpreter = void 0;
@@ -1017,6 +1076,7 @@ var Command;
     Command["WCOL"] = "WCOL";
     Command["CLS"] = "CLS";
     Command["VSYNC"] = "VSYNC";
+    Command["OUT"] = "OUT";
 })(Command = exports.Command || (exports.Command = {}));
 
 },{}],19:[function(require,module,exports){

@@ -1,7 +1,10 @@
 import { DisplayBase } from "./DisplayBase";
 import { Palette } from "./Palette";
+import { Tile } from "./Tile";
 import { TileBuffer } from "./TileBuffer";
+import { TileBufferLayer } from "./TileBufferLayer";
 import { Tileset } from "./Tileset";
+import { Viewport } from "./Viewport";
 
 export class Display {
 
@@ -54,6 +57,10 @@ export class Display {
         this.base.update();
     }
 
+    drawTileFrame(tile: Tile, x: number, y: number, transparent: boolean) {
+        this.base.drawTileFrame(tile, x, y, transparent);
+    }
+
     private drawVisibleBuffers() {
         for (let i = 0; i < this.buffers.length; i++) {
             const buf = this.buffers[i];
@@ -64,6 +71,20 @@ export class Display {
     }
 
     private drawBuffer(buf: TileBuffer) {
+        for (let i = 0; i < buf.layerCount; i++) {
+            const layer = buf.layers[i];
+            this.drawBufferLayer(layer, buf.view);
+        }
+    }
 
+    private drawBufferLayer(layer: TileBufferLayer, view: Viewport) {
+        let x = view.displayX;
+        let y = view.displayY;
+        for (let i = 0; i < layer.size; i++) {
+            const tile = layer.tiles[i];
+            if (tile.isEmpty()) {
+                continue;
+            }
+        }
     }
 }

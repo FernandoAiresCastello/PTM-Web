@@ -22,4 +22,8 @@ export class TileSeq {
         this.deleteAll();
         this.add(ix, fgc, bgc);
     }
+
+    isEmpty(): boolean {
+        return this.frames.length === 0;
+    }
 }

@@ -21,4 +21,5 @@ export enum Command {
     WCOL = "WCOL",
     CLS = "CLS",
     VSYNC = "VSYNC",
+    OUT = "OUT"
 }

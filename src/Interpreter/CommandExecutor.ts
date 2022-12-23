@@ -5,6 +5,7 @@ import { CommandDictionary } from "./CommandDictionary";
 import { ProgramLine } from "../Parser/ProgramLine";
 import { Command } from "../Parser/Command";
 import { DisplayBase } from "../Graphics/DisplayBase";
+import { Tile } from "../Graphics/Tile";
 
 export class CommandExecutor {
 
@@ -41,6 +42,7 @@ export class CommandExecutor {
             [Command.CHR]: this.CHR,
             [Command.WCOL]: this.WCOL,
             [Command.VSYNC]: this.VSYNC,
+            [Command.OUT]: this.OUT,
         };
     }
 
@@ -203,6 +205,21 @@ export class CommandExecutor {
         intp.argc(0);
         if (ptm.display) {
             ptm.display.update();
+        }
+    }
+
+    OUT(ptm: PTM, intp: Interpreter) {
+        intp.argc(6);
+        const ch = intp.requireNumber(0);
+        const fgc = intp.requireNumber(1);
+        const bgc = intp.requireNumber(2);
+        const x = intp.requireNumber(3);
+        const y = intp.requireNumber(4);
+        const transp = intp.requireNumber(5) > 0;
+        const tile = new Tile();
+        tile.set(ch, fgc, bgc);
+        if (ptm.display) {
+            ptm.display.drawTileFrame(tile, x, y, transp);
         }
     }
 }

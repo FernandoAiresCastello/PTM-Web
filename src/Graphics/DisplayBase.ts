@@ -3,6 +3,7 @@ import { CanvasPoint } from "./CanvasPoint";
 import { ColorString, PaletteIndex } from "./ColorTypes";
 import { Palette } from "./Palette";
 import { PixelBlock } from "./PixelBlock";
+import { Tile } from "./Tile";
 import { Tileset } from "./Tileset";
 
 export class DisplayBase {
@@ -75,6 +76,29 @@ export class DisplayBase {
 
     clearToBackColor() {
         this.clearToColor(this.backColorIx);
+    }
+
+    drawTileFrame(tile: Tile, x: number, y: number, transparent: boolean) {
+        x *= PixelBlock.Width;
+        y *= PixelBlock.Height;
+        const px = x;
+        const xmax = x + PixelBlock.Width;
+        const pixelBlock = this.tileset.get(tile.ix);
+        for (let i = 0; i < pixelBlock.pixels.length; i++) {
+            const pixel = pixelBlock.pixels[i];
+            const fgc = this.palette.get(tile.fgc);
+            const bgc = this.palette.get(tile.bgc);
+            if (pixel === PixelBlock.PixelOn) {
+                this.setPixelRgb(x, y, fgc);
+            } else if (pixel === PixelBlock.PixelOff && !transparent) {
+                this.setPixelRgb(x, y, bgc);
+            }
+            x++
+            if (x >= xmax) {
+                x = px;
+                y++;
+            }
+        }
     }
 
     private clearToColor(ix: PaletteIndex) {
