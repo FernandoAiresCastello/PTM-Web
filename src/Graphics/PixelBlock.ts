@@ -24,21 +24,28 @@ export class PixelBlock {
         return this.pixels;
     }
 
-    getPixelRowsAsNumbers(): number[] {
-        let bytes = [];
-        for (let row = 0; row < PixelBlock.Height; row++) {
-            bytes.push(this.getPixelRowAsNumber(row));
+    setPixelRow(pixelRow: number, byte: number) {
+        const bitIndex = pixelRow * PixelBlock.Width;
+        let currentPixels = this.pixels;
+        let newPixels = "";
+        const binaryRow = byte.toString(2).padStart(PixelBlock.Width, PixelBlock.PixelOff);
+        for (let i = 0; i < currentPixels.length; i++) {
+            if (i >= bitIndex && i < bitIndex + PixelBlock.Width) {
+                newPixels += binaryRow[i % PixelBlock.Width];
+            } else {
+                newPixels += currentPixels[i];
+            }
         }
-        return bytes;
+        this.pixels = newPixels;
     }
 
-    getPixelRowAsNumber(pixelRow: number): number {
-        const binary = this.getPixelRowAsBinaryString(pixelRow);
+    getRowAsByte(pixelRow: number): number {
+        const binary = this.getRowAsBinaryString(pixelRow);
         const rowPixels = Number.parseInt(binary, 2);
         return rowPixels;
     }
 
-    getPixelRowAsBinaryString(pixelRow: number): string {
+    getRowAsBinaryString(pixelRow: number): string {
         const bitIndex = pixelRow * PixelBlock.Width;
         let binary = "";
         for (let i = bitIndex; i < bitIndex + PixelBlock.Width; i++) {
@@ -47,10 +54,18 @@ export class PixelBlock {
         return binary;
     }
 
-    getPixelRowsAsBinaryStrings(): string[] {
+    getRowsAsBytes(): number[] {
+        let bytes = [];
+        for (let row = 0; row < PixelBlock.Height; row++) {
+            bytes.push(this.getRowAsByte(row));
+        }
+        return bytes;
+    }
+
+    getRowsAsBinaryStrings(): string[] {
         let str = [];
         for (let row = 0; row < PixelBlock.Height; row++) {
-            str.push(this.getPixelRowAsBinaryString(row));
+            str.push(this.getRowAsBinaryString(row));
         }
         return str;
     }

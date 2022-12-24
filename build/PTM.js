@@ -84,14 +84,14 @@ exports.Display = void 0;
 const DisplayBase_1 = require("./DisplayBase");
 const TileBuffer_1 = require("./TileBuffer");
 class Display {
-    constructor(displayElement, width, height, hStretch, vStretch, palette, tileset) {
+    constructor(displayElement, width, height, hStretch, vStretch, defaultBufLayers, palette, tileset) {
         this.animationFrameIndex = 0;
         this.base = new DisplayBase_1.DisplayBase(displayElement, width, height, hStretch, vStretch, palette, tileset);
         this.buffers = [];
-        this.createDefaultBuffer();
+        this.createDefaultBuffer(defaultBufLayers);
     }
-    createDefaultBuffer() {
-        this.createNewBuffer("default", 1, this.base.cols, this.base.rows, 0, 0);
+    createDefaultBuffer(defaultBufLayers) {
+        this.createNewBuffer("default", defaultBufLayers, this.base.cols, this.base.rows, 0, 0);
     }
     getDefaultBuffer() {
         return this.getBuffer("default");
@@ -107,9 +107,10 @@ class Display {
         this.buffers = [];
     }
     reset() {
+        const defaultBufLayers = this.getDefaultBuffer().layerCount;
         this.base.reset();
         this.deleteAllBuffers();
-        this.createDefaultBuffer();
+        this.createDefaultBuffer(defaultBufLayers);
     }
     setBackColorIx(ix) {
         this.base.backColorIx = ix;
@@ -165,7 +166,8 @@ class Display {
         let bufY = view.scrollY;
         for (let tileY = bufY; tileY < bufY + h; tileY++) {
             for (let tileX = bufX; tileX < bufX + w; tileX++) {
-                if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height) {
+                if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height &&
+                    dispX >= 0 && dispY >= 0 && dispX < this.base.cols && dispY < this.base.rows) {
                     const tileSeq = layer.getTileRef(tileX, tileY);
                     if (!tileSeq.isEmpty()) {
                         const tile = tileSeq.frames[this.animationFrameIndex % tileSeq.frames.length];
@@ -335,19 +337,27 @@ class PixelBlock {
     toString() {
         return this.pixels;
     }
-    getPixelRowsAsNumbers() {
-        let bytes = [];
-        for (let row = 0; row < PixelBlock.Height; row++) {
-            bytes.push(this.getPixelRowAsNumber(row));
+    setPixelRow(pixelRow, byte) {
+        const bitIndex = pixelRow * PixelBlock.Width;
+        let currentPixels = this.pixels;
+        let newPixels = "";
+        const binaryRow = byte.toString(2).padStart(PixelBlock.Width, PixelBlock.PixelOff);
+        for (let i = 0; i < currentPixels.length; i++) {
+            if (i >= bitIndex && i < bitIndex + PixelBlock.Width) {
+                newPixels += binaryRow[i % PixelBlock.Width];
+            }
+            else {
+                newPixels += currentPixels[i];
+            }
         }
-        return bytes;
+        this.pixels = newPixels;
     }
-    getPixelRowAsNumber(pixelRow) {
-        const binary = this.getPixelRowAsBinaryString(pixelRow);
+    getRowAsByte(pixelRow) {
+        const binary = this.getRowAsBinaryString(pixelRow);
         const rowPixels = Number.parseInt(binary, 2);
         return rowPixels;
     }
-    getPixelRowAsBinaryString(pixelRow) {
+    getRowAsBinaryString(pixelRow) {
         const bitIndex = pixelRow * PixelBlock.Width;
         let binary = "";
         for (let i = bitIndex; i < bitIndex + PixelBlock.Width; i++) {
@@ -355,10 +365,17 @@ class PixelBlock {
         }
         return binary;
     }
-    getPixelRowsAsBinaryStrings() {
+    getRowsAsBytes() {
+        let bytes = [];
+        for (let row = 0; row < PixelBlock.Height; row++) {
+            bytes.push(this.getRowAsByte(row));
+        }
+        return bytes;
+    }
+    getRowsAsBinaryStrings() {
         let str = [];
         for (let row = 0; row < PixelBlock.Height; row++) {
-            str.push(this.getPixelRowAsBinaryString(row));
+            str.push(this.getRowAsBinaryString(row));
         }
         return str;
     }
@@ -538,20 +555,7 @@ class Tileset {
         this.tiles[ix] = tile;
     }
     setPixelRow(ix, pixelRow, byte) {
-        const tile = this.tiles[ix];
-        const bitIndex = pixelRow * PixelBlock_1.PixelBlock.Width;
-        let currentPixels = tile.pixels;
-        let newPixels = "";
-        const binaryRow = byte.toString(2).padStart(PixelBlock_1.PixelBlock.Width);
-        for (let i = 0; i < currentPixels.length; i++) {
-            if (i >= bitIndex && i < bitIndex + PixelBlock_1.PixelBlock.Width) {
-                newPixels += binaryRow[i % PixelBlock_1.PixelBlock.Width];
-            }
-            else {
-                newPixels += currentPixels[i];
-            }
-        }
-        tile.pixels = newPixels;
+        this.tiles[ix].setPixelRow(pixelRow, byte);
     }
     get(ix) {
         return this.tiles[ix];
@@ -574,6 +578,16 @@ class Viewport {
         this.height = h;
         this.scrollX = 0;
         this.scrollY = 0;
+    }
+    set(dispX, dispY, w, h) {
+        this.displayX = dispX;
+        this.displayY = dispY;
+        this.width = w;
+        this.height = h;
+    }
+    scroll(dx, dy) {
+        this.scrollX += dx;
+        this.scrollY += dy;
     }
 }
 exports.Viewport = Viewport;
@@ -614,6 +628,7 @@ class CommandExecutor {
             [Command_1.Command.WCOL]: this.WCOL,
             [Command_1.Command.VSYNC]: this.VSYNC,
             [Command_1.Command.BUF_SEL]: this.BUF_SEL,
+            [Command_1.Command.BUF_VIEW]: this.BUF_VIEW,
             [Command_1.Command.LAYER]: this.LAYER,
             [Command_1.Command.LOCATE]: this.LOCATE,
             [Command_1.Command.TILE_NEW]: this.TILE_NEW,
@@ -665,12 +680,13 @@ class CommandExecutor {
         window.document.title = intp.requireString(0);
     }
     SCREEN(ptm, intp) {
-        intp.argc(4);
+        intp.argc(5);
         const width = intp.requireNumber(0);
         const height = intp.requireNumber(1);
         const hStretch = intp.requireNumber(2);
         const vStretch = intp.requireNumber(3);
-        ptm.createDisplay(width, height, hStretch, vStretch);
+        const defaultBufLayers = intp.requireNumber(4);
+        ptm.createDisplay(width, height, hStretch, vStretch, defaultBufLayers);
     }
     GOTO(ptm, intp) {
         intp.argc(1);
@@ -776,6 +792,16 @@ class CommandExecutor {
             else {
                 throw new PTM_RuntimeError_1.PTM_RuntimeError(`Buffer not found with id "${bufId}"`, intp.programLine);
             }
+        }
+    }
+    BUF_VIEW(ptm, intp) {
+        intp.argc(4);
+        const x = intp.requireNumber(0);
+        const y = intp.requireNumber(1);
+        const w = intp.requireNumber(2);
+        const h = intp.requireNumber(3);
+        if (ptm.cursor) {
+            ptm.cursor.buffer.view.set(x, y, w, h);
         }
     }
     LAYER(ptm, intp) {
@@ -1200,7 +1226,7 @@ class PTM {
             throw new PTM_RuntimeError_1.PTM_RuntimeError("Call stack is empty", this.currentLine);
         }
     }
-    createDisplay(width, height, hStretch, vStretch) {
+    createDisplay(width, height, hStretch, vStretch, defaultBufLayers) {
         if (this.display) {
             this.display.reset();
             if (this.cursor) {
@@ -1208,7 +1234,7 @@ class PTM {
             }
         }
         else {
-            this.display = new Display_1.Display(this.displayElement, width, height, hStretch, vStretch, this.palette, this.tileset);
+            this.display = new Display_1.Display(this.displayElement, width, height, hStretch, vStretch, defaultBufLayers, this.palette, this.tileset);
             this.cursor = new Cursor_1.Cursor(this.display.getDefaultBuffer());
         }
     }
@@ -1243,6 +1269,7 @@ var Command;
     Command["CLS"] = "CLS";
     Command["VSYNC"] = "VSYNC";
     Command["BUF_SEL"] = "BUF.SEL";
+    Command["BUF_VIEW"] = "BUF.VIEW";
     Command["LAYER"] = "LAYER";
     Command["TILE_NEW"] = "TILE.NEW";
     Command["LOCATE"] = "LOCATE";

@@ -21,19 +21,7 @@ export class Tileset {
     }
 
     setPixelRow(ix: number, pixelRow: number, byte: number) {
-        const tile = this.tiles[ix];
-        const bitIndex = pixelRow * PixelBlock.Width;
-        let currentPixels = tile.pixels;
-        let newPixels = "";
-        const binaryRow = byte.toString(2).padStart(PixelBlock.Width);
-        for (let i = 0; i < currentPixels.length; i++) {
-            if (i >= bitIndex && i < bitIndex + PixelBlock.Width) {
-                newPixels += binaryRow[i % PixelBlock.Width];
-            } else {
-                newPixels += currentPixels[i];
-            }
-        }
-        tile.pixels = newPixels;
+        this.tiles[ix].setPixelRow(pixelRow, byte);
     }
 
     get(ix: number): PixelBlock {

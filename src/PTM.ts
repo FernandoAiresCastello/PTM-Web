@@ -177,14 +177,14 @@ export class PTM {
         }
     }
 
-    createDisplay(width: number, height: number, hStretch: number, vStretch: number) {
+    createDisplay(width: number, height: number, hStretch: number, vStretch: number, defaultBufLayers: number) {
         if (this.display) {
             this.display.reset();
             if (this.cursor) {
                 this.cursor.set(this.display.getDefaultBuffer(), 0, 0, 0);
             }
         } else {
-            this.display = new Display(this.displayElement, width, height, hStretch, vStretch, this.palette, this.tileset);
+            this.display = new Display(this.displayElement, width, height, hStretch, vStretch, defaultBufLayers, this.palette, this.tileset);
             this.cursor = new Cursor(this.display.getDefaultBuffer());
         }
     }

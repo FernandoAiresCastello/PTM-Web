@@ -22,6 +22,7 @@ export enum Command {
     CLS = "CLS",
     VSYNC = "VSYNC",
     BUF_SEL = "BUF.SEL",
+    BUF_VIEW = "BUF.VIEW",
     LAYER = "LAYER",
     TILE_NEW = "TILE.NEW",
     LOCATE = "LOCATE",

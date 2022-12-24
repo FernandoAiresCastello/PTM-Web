@@ -42,6 +42,7 @@ export class CommandExecutor {
             [Command.WCOL]: this.WCOL,
             [Command.VSYNC]: this.VSYNC,
             [Command.BUF_SEL]: this.BUF_SEL,
+            [Command.BUF_VIEW]: this.BUF_VIEW,
             [Command.LAYER]: this.LAYER,
             [Command.LOCATE]: this.LOCATE,
             [Command.TILE_NEW]: this.TILE_NEW,
@@ -99,12 +100,13 @@ export class CommandExecutor {
     }
 
     SCREEN(ptm: PTM, intp: Interpreter) {
-        intp.argc(4);
+        intp.argc(5);
         const width = intp.requireNumber(0);
         const height = intp.requireNumber(1);
         const hStretch = intp.requireNumber(2);
         const vStretch = intp.requireNumber(3);
-        ptm.createDisplay(width, height, hStretch, vStretch);
+        const defaultBufLayers = intp.requireNumber(4);
+        ptm.createDisplay(width, height, hStretch, vStretch, defaultBufLayers);
     }
 
     GOTO(ptm: PTM, intp: Interpreter) {
@@ -224,6 +226,17 @@ export class CommandExecutor {
             } else {
                 throw new PTM_RuntimeError(`Buffer not found with id "${bufId}"`, intp.programLine);
             }
+        }
+    }
+
+    BUF_VIEW(ptm: PTM, intp: Interpreter) {
+        intp.argc(4);
+        const x = intp.requireNumber(0);
+        const y = intp.requireNumber(1);
+        const w = intp.requireNumber(2);
+        const h = intp.requireNumber(3);
+        if (ptm.cursor) {
+            ptm.cursor.buffer.view.set(x, y, w, h);
         }
     }
 

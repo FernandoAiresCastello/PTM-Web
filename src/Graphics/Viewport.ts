@@ -15,4 +15,16 @@ export class Viewport {
         this.scrollX = 0;
         this.scrollY = 0;
     }
+
+    set(dispX: number, dispY: number, w: number, h: number) {
+        this.displayX = dispX;
+        this.displayY = dispY;
+        this.width = w;
+        this.height = h;
+    }
+
+    scroll(dx: number, dy: number) {
+        this.scrollX += dx;
+        this.scrollY += dy;
+    }
 }

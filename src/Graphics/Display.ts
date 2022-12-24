@@ -14,15 +14,15 @@ export class Display {
     private animationFrameIndex: number = 0;
 
     constructor(displayElement: HTMLElement, 
-        width: number, height: number, hStretch: number, vStretch: number, palette: Palette, tileset: Tileset) {
+        width: number, height: number, hStretch: number, vStretch: number, defaultBufLayers: number, palette: Palette, tileset: Tileset) {
 
         this.base = new DisplayBase(displayElement, width, height, hStretch, vStretch, palette, tileset);
         this.buffers = [];
-        this.createDefaultBuffer();
+        this.createDefaultBuffer(defaultBufLayers);
     }
 
-    private createDefaultBuffer() {
-        this.createNewBuffer("default", 1, this.base.cols, this.base.rows, 0, 0);
+    private createDefaultBuffer(defaultBufLayers: number) {
+        this.createNewBuffer("default", defaultBufLayers, this.base.cols, this.base.rows, 0, 0);
     }
 
     getDefaultBuffer(): TileBuffer {
@@ -42,9 +42,10 @@ export class Display {
     }
 
     reset() {
+        const defaultBufLayers = this.getDefaultBuffer().layerCount;
         this.base.reset();
         this.deleteAllBuffers();
-        this.createDefaultBuffer();
+        this.createDefaultBuffer(defaultBufLayers);
     }
 
     setBackColorIx(ix: number) {
@@ -109,7 +110,8 @@ export class Display {
         let bufY = view.scrollY;
         for (let tileY = bufY; tileY < bufY + h; tileY++) {
             for (let tileX = bufX; tileX < bufX + w; tileX++) {
-                if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height) {
+                if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height && 
+                    dispX >= 0 && dispY >= 0 && dispX < this.base.cols && dispY < this.base.rows) {
                     const tileSeq = layer.getTileRef(tileX, tileY);
                     if (!tileSeq.isEmpty()) {
                         const tile = tileSeq.frames[this.animationFrameIndex % tileSeq.frames.length];
