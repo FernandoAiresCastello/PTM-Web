@@ -93,7 +93,7 @@ export class DisplayBase {
             } else if (pixel === PixelBlock.PixelOff && !transparent) {
                 this.setPixelRgb(x, y, bgc);
             }
-            x++
+            x++;
             if (x >= xmax) {
                 x = px;
                 y++;

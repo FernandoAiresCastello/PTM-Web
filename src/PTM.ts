@@ -4,13 +4,14 @@ import { Program } from "./Parser/Program";
 import { CommandExecutor } from "./Interpreter/CommandExecutor";
 import { Interpreter } from "./Interpreter/Interpreter";
 import { ProgramLine } from "./Parser/ProgramLine";
-import { DisplayBase } from "./Graphics/DisplayBase";
 import { PTM_RuntimeError } from "./Errors/PTM_RuntimeError";
 import { Variables } from "./Interpreter/Variables";
 import { Arrays } from "./Interpreter/Arrays";
 import { Palette } from "./Graphics/Palette";
 import { Tileset } from "./Graphics/Tileset";
 import { Display } from "./Graphics/Display";
+import { Cursor } from "./Graphics/Cursor";
+import { TileSeq } from "./Graphics/TileSeq";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -39,17 +40,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 export class PTM {
 
+    vars: Variables;
+    arrays: Arrays;
+    palette: Palette;
+    tileset: Tileset;
+    display: Display | null;
+    cursor: Cursor | null;
+    currentTile: TileSeq;
+
     private readonly logDebugFormat = "color:#0ff";
     private readonly logExecFormat = "color:#ff0";
     private readonly trace: boolean = false;
     private readonly intervalLength: number = 1;
-
-    palette: Palette;
-    tileset: Tileset;
-    display: Display | null;
-    vars: Variables;
-    arrays: Arrays;
-
     readonly executor: CommandExecutor;
     readonly intp: Interpreter;
     private readonly parser: Parser;
@@ -77,6 +79,9 @@ export class PTM {
         this.arrays = {};
         this.palette = new Palette();
         this.tileset = new Tileset();
+        this.cursor = null;
+        this.currentTile = new TileSeq();
+
         this.intervalId = this.start();
     }
 
@@ -175,9 +180,12 @@ export class PTM {
     createDisplay(width: number, height: number, hStretch: number, vStretch: number) {
         if (this.display) {
             this.display.reset();
+            if (this.cursor) {
+                this.cursor.set(this.display.getDefaultBuffer(), 0, 0, 0);
+            }
         } else {
-            this.display = new Display(this.displayElement, 
-                width, height, hStretch, vStretch, this.palette, this.tileset);
+            this.display = new Display(this.displayElement, width, height, hStretch, vStretch, this.palette, this.tileset);
+            this.cursor = new Cursor(this.display.getDefaultBuffer());
         }
     }
 }

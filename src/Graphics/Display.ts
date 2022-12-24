@@ -11,6 +11,7 @@ export class Display {
 
     private readonly base: DisplayBase;
     private buffers: TileBuffer[];
+    private animationFrameIndex: number = 0;
 
     constructor(displayElement: HTMLElement, 
         width: number, height: number, hStretch: number, vStretch: number, palette: Palette, tileset: Tileset) {
@@ -22,6 +23,10 @@ export class Display {
 
     private createDefaultBuffer() {
         this.createNewBuffer("default", 1, this.base.cols, this.base.rows, 0, 0);
+    }
+
+    getDefaultBuffer(): TileBuffer {
+        return this.getBuffer("default")!;
     }
 
     createNewBuffer(id: string, layers: number, w: number, h: number, dispX: number, dispY: number): TileBuffer {
@@ -102,16 +107,19 @@ export class Display {
         let dispY = view.displayY;
         let bufX = view.scrollX;
         let bufY = view.scrollY;
-        for (let tileY = bufY; tileY < bufY + h; tileY++, dispY++) {
-            for (let tileX = bufX; tileX < bufX + w; tileX++, dispX++) {
+        for (let tileY = bufY; tileY < bufY + h; tileY++) {
+            for (let tileX = bufX; tileX < bufX + w; tileX++) {
                 if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height) {
                     const tileSeq = layer.getTileRef(tileX, tileY);
                     if (!tileSeq.isEmpty()) {
-                        const tile = tileSeq.frames[0]; // todo: use animation index
+                        const tile = tileSeq.frames[this.animationFrameIndex % tileSeq.frames.length];
                         this.drawTileFrame(tile, dispX, dispY, tileSeq.transparent);
                     }
                 }
+                dispX++;
             }
+            dispX = view.displayX;
+            dispY++;
         }
     }
 }

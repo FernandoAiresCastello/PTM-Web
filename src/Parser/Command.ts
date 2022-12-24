@@ -21,5 +21,12 @@ export enum Command {
     WCOL = "WCOL",
     CLS = "CLS",
     VSYNC = "VSYNC",
-    OUT = "OUT"
+    BUF_SEL = "BUF.SEL",
+    LAYER = "LAYER",
+    TILE_NEW = "TILE.NEW",
+    LOCATE = "LOCATE",
+    PUT = "PUT",
+    FILL = "FILL",
+    TRON = "TRON",
+    TROFF = "TROFF"
 }

@@ -56,17 +56,45 @@ exports.CanvasPoint = CanvasPoint;
 },{}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Cursor = void 0;
+class Cursor {
+    constructor(buffer) {
+        this.buffer = buffer;
+        this.layer = 0;
+        this.x = 0;
+        this.y = 0;
+    }
+    set(buffer, layer, x, y) {
+        this.buffer = buffer;
+        this.layer = layer;
+        this.x = x;
+        this.y = y;
+    }
+    setPos(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+}
+exports.Cursor = Cursor;
+
+},{}],6:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.Display = void 0;
 const DisplayBase_1 = require("./DisplayBase");
 const TileBuffer_1 = require("./TileBuffer");
 class Display {
     constructor(displayElement, width, height, hStretch, vStretch, palette, tileset) {
+        this.animationFrameIndex = 0;
         this.base = new DisplayBase_1.DisplayBase(displayElement, width, height, hStretch, vStretch, palette, tileset);
         this.buffers = [];
         this.createDefaultBuffer();
     }
     createDefaultBuffer() {
         this.createNewBuffer("default", 1, this.base.cols, this.base.rows, 0, 0);
+    }
+    getDefaultBuffer() {
+        return this.getBuffer("default");
     }
     createNewBuffer(id, layers, w, h, dispX, dispY) {
         const buf = new TileBuffer_1.TileBuffer(id, layers, w, h);
@@ -135,22 +163,25 @@ class Display {
         let dispY = view.displayY;
         let bufX = view.scrollX;
         let bufY = view.scrollY;
-        for (let tileY = bufY; tileY < bufY + h; tileY++, dispY++) {
-            for (let tileX = bufX; tileX < bufX + w; tileX++, dispX++) {
+        for (let tileY = bufY; tileY < bufY + h; tileY++) {
+            for (let tileX = bufX; tileX < bufX + w; tileX++) {
                 if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height) {
                     const tileSeq = layer.getTileRef(tileX, tileY);
                     if (!tileSeq.isEmpty()) {
-                        const tile = tileSeq.frames[0]; // todo: use animation index
+                        const tile = tileSeq.frames[this.animationFrameIndex % tileSeq.frames.length];
                         this.drawTileFrame(tile, dispX, dispY, tileSeq.transparent);
                     }
                 }
+                dispX++;
             }
+            dispX = view.displayX;
+            dispY++;
         }
     }
 }
 exports.Display = Display;
 
-},{"./DisplayBase":6,"./TileBuffer":10}],6:[function(require,module,exports){
+},{"./DisplayBase":7,"./TileBuffer":11}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DisplayBase = void 0;
@@ -256,7 +287,7 @@ class DisplayBase {
 }
 exports.DisplayBase = DisplayBase;
 
-},{"../Errors/PTM_InitializationError":1,"./CanvasPoint":4,"./PixelBlock":8}],7:[function(require,module,exports){
+},{"../Errors/PTM_InitializationError":1,"./CanvasPoint":4,"./PixelBlock":9}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Palette = void 0;
@@ -285,7 +316,7 @@ class Palette {
 }
 exports.Palette = Palette;
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 "use strict";
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -340,7 +371,7 @@ PixelBlock.Size = _a.Width * _a.Height;
 PixelBlock.PixelOn = '1';
 PixelBlock.PixelOff = '0';
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tile = void 0;
@@ -368,7 +399,7 @@ class Tile {
 }
 exports.Tile = Tile;
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TileBuffer = void 0;
@@ -409,7 +440,7 @@ class TileBuffer {
 }
 exports.TileBuffer = TileBuffer;
 
-},{"./TileBufferLayer":11,"./Viewport":14}],11:[function(require,module,exports){
+},{"./TileBufferLayer":12,"./Viewport":15}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TileBufferLayer = void 0;
@@ -431,7 +462,10 @@ class TileBufferLayer {
         }
     }
     setTile(tile, x, y) {
-        this.tiles[y * this.width + x].setEqual(tile);
+        const pos = y * this.width + x;
+        if (pos >= 0 && pos < this.tiles.length) {
+            this.tiles[pos].setEqual(tile);
+        }
     }
     getTileCopy(x, y) {
         const tile = new TileSeq_1.TileSeq();
@@ -444,7 +478,7 @@ class TileBufferLayer {
 }
 exports.TileBufferLayer = TileBufferLayer;
 
-},{"./TileSeq":12}],12:[function(require,module,exports){
+},{"./TileSeq":13}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TileSeq = void 0;
@@ -484,7 +518,7 @@ class TileSeq {
 }
 exports.TileSeq = TileSeq;
 
-},{"./Tile":9}],13:[function(require,module,exports){
+},{"./Tile":10}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tileset = void 0;
@@ -528,7 +562,7 @@ class Tileset {
 }
 exports.Tileset = Tileset;
 
-},{"./PixelBlock":8}],14:[function(require,module,exports){
+},{"./PixelBlock":9}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Viewport = void 0;
@@ -544,13 +578,12 @@ class Viewport {
 }
 exports.Viewport = Viewport;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommandExecutor = void 0;
 const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
 const Command_1 = require("../Parser/Command");
-const TileSeq_1 = require("../Graphics/TileSeq");
 class CommandExecutor {
     constructor(ptm, intp) {
         this.ptm = ptm;
@@ -580,7 +613,14 @@ class CommandExecutor {
             [Command_1.Command.CHR]: this.CHR,
             [Command_1.Command.WCOL]: this.WCOL,
             [Command_1.Command.VSYNC]: this.VSYNC,
-            [Command_1.Command.OUT]: this.OUT,
+            [Command_1.Command.BUF_SEL]: this.BUF_SEL,
+            [Command_1.Command.LAYER]: this.LAYER,
+            [Command_1.Command.LOCATE]: this.LOCATE,
+            [Command_1.Command.TILE_NEW]: this.TILE_NEW,
+            [Command_1.Command.PUT]: this.PUT,
+            [Command_1.Command.FILL]: this.FILL,
+            [Command_1.Command.TRON]: this.TRON,
+            [Command_1.Command.TROFF]: this.TROFF
         };
     }
     execute(programLine) {
@@ -725,27 +765,74 @@ class CommandExecutor {
             ptm.display.update();
         }
     }
-    OUT(ptm, intp) {
-        intp.argc(8);
-        const buf = intp.requireString(0);
-        const ch = intp.requireNumber(1);
-        const fgc = intp.requireNumber(2);
-        const bgc = intp.requireNumber(3);
-        const layer = intp.requireNumber(4);
-        const x = intp.requireNumber(5);
-        const y = intp.requireNumber(6);
-        const transp = intp.requireNumber(7) > 0;
-        const tile = new TileSeq_1.TileSeq();
-        tile.transparent = transp;
-        tile.setSingle(ch, fgc, bgc);
-        if (ptm.display) {
-            ptm.display.setTile(buf, layer, x, y, tile, transp);
+    BUF_SEL(ptm, intp) {
+        intp.argc(1);
+        const bufId = intp.requireString(0);
+        if (ptm.cursor && ptm.display) {
+            const buf = ptm.display.getBuffer(bufId);
+            if (buf) {
+                ptm.cursor.buffer = buf;
+            }
+            else {
+                throw new PTM_RuntimeError_1.PTM_RuntimeError(`Buffer not found with id "${bufId}"`, intp.programLine);
+            }
         }
+    }
+    LAYER(ptm, intp) {
+        intp.argc(1);
+        const layer = intp.requireNumber(0);
+        if (ptm.cursor) {
+            if (layer >= 0 && layer < ptm.cursor.buffer.layerCount) {
+                ptm.cursor.layer = layer;
+            }
+            else {
+                throw new PTM_RuntimeError_1.PTM_RuntimeError(`Layer index out of bounds for buffer "${ptm.cursor.buffer.id}": ${layer}`, intp.programLine);
+            }
+        }
+    }
+    TILE_NEW(ptm, intp) {
+        intp.argc(3);
+        const ch = intp.requireNumber(0);
+        const fgc = intp.requireNumber(1);
+        const bgc = intp.requireNumber(2);
+        ptm.currentTile.setSingle(ch, fgc, bgc);
+    }
+    LOCATE(ptm, intp) {
+        intp.argc(2);
+        const x = intp.requireNumber(0);
+        const y = intp.requireNumber(1);
+        if (ptm.cursor) {
+            ptm.cursor.setPos(x, y);
+        }
+    }
+    PUT(ptm, intp) {
+        intp.argc(0);
+        if (ptm.cursor && ptm.display) {
+            ptm.cursor.buffer.setTile(ptm.currentTile, ptm.cursor.layer, ptm.cursor.x, ptm.cursor.y);
+        }
+    }
+    FILL(ptm, intp) {
+        intp.argc(0);
+        if (ptm.cursor && ptm.display) {
+            for (let y = 0; y < ptm.cursor.buffer.height; y++) {
+                for (let x = 0; x < ptm.cursor.buffer.width; x++) {
+                    ptm.cursor.buffer.setTile(ptm.currentTile, ptm.cursor.layer, x, y);
+                }
+            }
+        }
+    }
+    TRON(ptm, intp) {
+        intp.argc(0);
+        ptm.currentTile.transparent = true;
+    }
+    TROFF(ptm, intp) {
+        intp.argc(0);
+        ptm.currentTile.transparent = false;
     }
 }
 exports.CommandExecutor = CommandExecutor;
 
-},{"../Errors/PTM_RuntimeError":3,"../Graphics/TileSeq":12,"../Parser/Command":18}],16:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/Command":19}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Interpreter = void 0;
@@ -893,6 +980,10 @@ class Interpreter {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Could not get number from parameter`, this.programLine);
         }
     }
+    requireBoolean(paramIx) {
+        const value = this.requireNumber(paramIx);
+        return value > 0;
+    }
     requirePaletteIndex(paramIx) {
         const paletteIx = this.requireNumber(paramIx);
         if (paletteIx >= 0 && paletteIx < this.ptm.palette.size()) {
@@ -965,7 +1056,7 @@ class Interpreter {
 }
 exports.Interpreter = Interpreter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/Command":18,"../Parser/ParamType":22}],17:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/Command":19,"../Parser/ParamType":23}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
@@ -977,6 +1068,8 @@ const PTM_RuntimeError_1 = require("./Errors/PTM_RuntimeError");
 const Palette_1 = require("./Graphics/Palette");
 const Tileset_1 = require("./Graphics/Tileset");
 const Display_1 = require("./Graphics/Display");
+const Cursor_1 = require("./Graphics/Cursor");
+const TileSeq_1 = require("./Graphics/TileSeq");
 document.addEventListener("DOMContentLoaded", () => {
     console.log("%c" +
         "=======================================================\n" +
@@ -1015,6 +1108,8 @@ class PTM {
         this.arrays = {};
         this.palette = new Palette_1.Palette();
         this.tileset = new Tileset_1.Tileset();
+        this.cursor = null;
+        this.currentTile = new TileSeq_1.TileSeq();
         this.intervalId = this.start();
     }
     logInfo(msg) {
@@ -1108,15 +1203,19 @@ class PTM {
     createDisplay(width, height, hStretch, vStretch) {
         if (this.display) {
             this.display.reset();
+            if (this.cursor) {
+                this.cursor.set(this.display.getDefaultBuffer(), 0, 0, 0);
+            }
         }
         else {
             this.display = new Display_1.Display(this.displayElement, width, height, hStretch, vStretch, this.palette, this.tileset);
+            this.cursor = new Cursor_1.Cursor(this.display.getDefaultBuffer());
         }
     }
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Graphics/Display":5,"./Graphics/Palette":7,"./Graphics/Tileset":13,"./Interpreter/CommandExecutor":15,"./Interpreter/Interpreter":16,"./Parser/Parser":23}],18:[function(require,module,exports){
+},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/Display":6,"./Graphics/Palette":8,"./Graphics/TileSeq":13,"./Graphics/Tileset":14,"./Interpreter/CommandExecutor":16,"./Interpreter/Interpreter":17,"./Parser/Parser":24}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Command = void 0;
@@ -1143,10 +1242,17 @@ var Command;
     Command["WCOL"] = "WCOL";
     Command["CLS"] = "CLS";
     Command["VSYNC"] = "VSYNC";
-    Command["OUT"] = "OUT";
+    Command["BUF_SEL"] = "BUF.SEL";
+    Command["LAYER"] = "LAYER";
+    Command["TILE_NEW"] = "TILE.NEW";
+    Command["LOCATE"] = "LOCATE";
+    Command["PUT"] = "PUT";
+    Command["FILL"] = "FILL";
+    Command["TRON"] = "TRON";
+    Command["TROFF"] = "TROFF";
 })(Command = exports.Command || (exports.Command = {}));
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -1157,7 +1263,7 @@ var ExecutionTime;
     ExecutionTime["RunTime"] = "RunTime";
 })(ExecutionTime = exports.ExecutionTime || (exports.ExecutionTime = {}));
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NumberBase = void 0;
@@ -1169,7 +1275,7 @@ var NumberBase;
     NumberBase["Binary"] = "Binary";
 })(NumberBase = exports.NumberBase || (exports.NumberBase = {}));
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
@@ -1308,7 +1414,7 @@ Param.BinPrefix = "&B";
 Param.ArrayLeftBrace = "[";
 Param.ArrayRightBrace = "]";
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":16,"./NumberBase":20,"./ParamType":22}],22:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":17,"./NumberBase":21,"./ParamType":23}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
@@ -1322,7 +1428,7 @@ var ParamType;
     ParamType["ArrayIxVarIdentifier"] = "ArrayIxVarIdentifier";
 })(ParamType = exports.ParamType || (exports.ParamType = {}));
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
@@ -1469,7 +1575,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":16,"./Command":18,"./ExecutionTime":19,"./Param":21,"./Program":24,"./ProgramLine":25,"./ProgramLineType":26}],24:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":17,"./Command":19,"./ExecutionTime":20,"./Param":22,"./Program":25,"./ProgramLine":26,"./ProgramLineType":27}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;
@@ -1490,7 +1596,7 @@ class Program {
 }
 exports.Program = Program;
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLine = void 0;
@@ -1511,7 +1617,7 @@ class ProgramLine {
 }
 exports.ProgramLine = ProgramLine;
 
-},{"./ExecutionTime":19,"./ProgramLineType":26}],26:[function(require,module,exports){
+},{"./ExecutionTime":20,"./ProgramLineType":27}],27:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLineType = void 0;
@@ -1523,4 +1629,4 @@ var ProgramLineType;
     ProgramLineType["Label"] = "Label";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}]},{},[17]);
+},{}]},{},[18]);

@@ -4,8 +4,6 @@ import { Interpreter } from "./Interpreter";
 import { CommandDictionary } from "./CommandDictionary";
 import { ProgramLine } from "../Parser/ProgramLine";
 import { Command } from "../Parser/Command";
-import { DisplayBase } from "../Graphics/DisplayBase";
-import { Tile } from "../Graphics/Tile";
 import { TileSeq } from "../Graphics/TileSeq";
 
 export class CommandExecutor {
@@ -43,7 +41,14 @@ export class CommandExecutor {
             [Command.CHR]: this.CHR,
             [Command.WCOL]: this.WCOL,
             [Command.VSYNC]: this.VSYNC,
-            [Command.OUT]: this.OUT,
+            [Command.BUF_SEL]: this.BUF_SEL,
+            [Command.LAYER]: this.LAYER,
+            [Command.LOCATE]: this.LOCATE,
+            [Command.TILE_NEW]: this.TILE_NEW,
+            [Command.PUT]: this.PUT,
+            [Command.FILL]: this.FILL,
+            [Command.TRON]: this.TRON,
+            [Command.TROFF]: this.TROFF
         };
     }
 
@@ -209,21 +214,75 @@ export class CommandExecutor {
         }
     }
 
-    OUT(ptm: PTM, intp: Interpreter) {
-        intp.argc(8);
-        const buf = intp.requireString(0);
-        const ch = intp.requireNumber(1);
-        const fgc = intp.requireNumber(2);
-        const bgc = intp.requireNumber(3);
-        const layer = intp.requireNumber(4);
-        const x = intp.requireNumber(5);
-        const y = intp.requireNumber(6);
-        const transp = intp.requireNumber(7) > 0;
-        const tile = new TileSeq();
-        tile.transparent = transp;
-        tile.setSingle(ch, fgc, bgc);
-        if (ptm.display) {
-            ptm.display.setTile(buf, layer, x, y, tile, transp);
+    BUF_SEL(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const bufId = intp.requireString(0);
+        if (ptm.cursor && ptm.display) {
+            const buf = ptm.display.getBuffer(bufId);
+            if (buf) {
+                ptm.cursor.buffer = buf;
+            } else {
+                throw new PTM_RuntimeError(`Buffer not found with id "${bufId}"`, intp.programLine);
+            }
         }
+    }
+
+    LAYER(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const layer = intp.requireNumber(0);
+        if (ptm.cursor) {
+            if (layer >= 0 && layer < ptm.cursor.buffer.layerCount) {
+                ptm.cursor.layer = layer;
+            } else {
+                throw new PTM_RuntimeError(
+                    `Layer index out of bounds for buffer "${ptm.cursor.buffer.id}": ${layer}`, intp.programLine);
+            }
+        }
+    }
+
+    TILE_NEW(ptm: PTM, intp: Interpreter) {
+        intp.argc(3);
+        const ch = intp.requireNumber(0);
+        const fgc = intp.requireNumber(1);
+        const bgc = intp.requireNumber(2);
+        ptm.currentTile.setSingle(ch, fgc, bgc);
+    }
+
+    LOCATE(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const x = intp.requireNumber(0);
+        const y = intp.requireNumber(1);
+        if (ptm.cursor) {
+            ptm.cursor.setPos(x, y);
+        }
+    }
+
+    PUT(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
+        if (ptm.cursor && ptm.display) {
+            ptm.cursor.buffer.setTile(
+                ptm.currentTile, ptm.cursor.layer, ptm.cursor.x, ptm.cursor.y);
+        }
+    }
+
+    FILL(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
+        if (ptm.cursor && ptm.display) {
+            for (let y = 0; y < ptm.cursor.buffer.height; y++) {
+                for (let x = 0; x < ptm.cursor.buffer.width; x++) {
+                    ptm.cursor.buffer.setTile(ptm.currentTile, ptm.cursor.layer, x, y);            
+                }
+            }
+        }        
+    }
+
+    TRON(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
+        ptm.currentTile.transparent = true;
+    }
+
+    TROFF(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
+        ptm.currentTile.transparent = false;
     }
 }

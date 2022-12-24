@@ -14,7 +14,8 @@
     PAL 2,&hff0000
     PAL 3,&h00ff00
     PAL 4,&h0000ff
-    PAL 5,&h808080
+    PAL 5,&h200030
+    PAL 6,&h101010
 
     CHR 1,0,&b11111111
     CHR 1,1,&b10000001
@@ -25,10 +26,32 @@
     CHR 1,6,&b10000001
     CHR 1,7,&b11111111
 
+    CHR 2,0,&b11111111
+    CHR 2,1,&b10000001
+    CHR 2,2,&b10000001
+    CHR 2,3,&b10000001
+    CHR 2,4,&b10000001
+    CHR 2,5,&b10000001
+    CHR 2,6,&b10000001
+    CHR 2,7,&b11111111
+
     WCOL 5
-    OUT "default", 1,2,3, 0,0,0, 0
-    OUT "default", 1,3,2, 0,1,1, 0
-    OUT "default", 1,4,3, 0,2,2, 1
+
+    BUF.SEL "default"
+    LAYER 0
+
+    TILE.NEW 2,6,0
+    FILL
+    
+    TILE.NEW 1,2,3
+    LOCATE 0,0
+    PUT
+    TILE.NEW 1,3,4
+    LOCATE 1,1
+    PUT
+    TILE.NEW 1,4,2
+    LOCATE 2,2
+    PUT
 
     VSYNC
 

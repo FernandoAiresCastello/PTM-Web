@@ -156,6 +156,11 @@ export class Interpreter {
         }
     }
 
+    requireBoolean(paramIx: number): boolean {
+        const value = this.requireNumber(paramIx);
+        return value > 0;
+    }
+
     requirePaletteIndex(paramIx: number): number {
         const paletteIx = this.requireNumber(paramIx);
         if (paletteIx >= 0 && paletteIx < this.ptm.palette.size()) {
