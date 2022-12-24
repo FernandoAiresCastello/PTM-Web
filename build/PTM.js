@@ -96,6 +96,21 @@ class Display {
         this.drawVisibleBuffers();
         this.base.update();
     }
+    setTile(bufId, layer, x, y, tile, transp) {
+        const buf = this.getBuffer(bufId);
+        if (buf) {
+            buf.layers[layer].setTile(tile, x, y);
+        }
+    }
+    getBuffer(id) {
+        for (let i = 0; i < this.buffers.length; i++) {
+            const buf = this.buffers[i];
+            if (buf.id === id) {
+                return buf;
+            }
+        }
+        return null;
+    }
     drawTileFrame(tile, x, y, transparent) {
         this.base.drawTileFrame(tile, x, y, transparent);
     }
@@ -114,12 +129,21 @@ class Display {
         }
     }
     drawBufferLayer(layer, view) {
-        let x = view.displayX;
-        let y = view.displayY;
-        for (let i = 0; i < layer.size; i++) {
-            const tile = layer.tiles[i];
-            if (tile.isEmpty()) {
-                continue;
+        const w = view.width;
+        const h = view.height;
+        let dispX = view.displayX;
+        let dispY = view.displayY;
+        let bufX = view.scrollX;
+        let bufY = view.scrollY;
+        for (let tileY = bufY; tileY < bufY + h; tileY++, dispY++) {
+            for (let tileX = bufX; tileX < bufX + w; tileX++, dispX++) {
+                if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height) {
+                    const tileSeq = layer.getTileRef(tileX, tileY);
+                    if (!tileSeq.isEmpty()) {
+                        const tile = tileSeq.frames[0]; // todo: use animation index
+                        this.drawTileFrame(tile, dispX, dispY, tileSeq.transparent);
+                    }
+                }
             }
         }
     }
@@ -331,6 +355,16 @@ class Tile {
         this.fgc = fgc;
         this.bgc = bgc;
     }
+    setEqual(other) {
+        this.ix = other.ix;
+        this.fgc = other.fgc;
+        this.bgc = other.bgc;
+    }
+    setBlank() {
+        this.ix = 0;
+        this.fgc = 0;
+        this.bgc = 0;
+    }
 }
 exports.Tile = Tile;
 
@@ -363,6 +397,15 @@ class TileBuffer {
     clearLayer(layer) {
         this.layers[layer].clear();
     }
+    setTile(tile, layer, x, y) {
+        this.layers[layer].setTile(tile, x, y);
+    }
+    getTileCopy(layer, x, y) {
+        return this.layers[layer].getTileCopy(x, y);
+    }
+    getTileRef(layer, x, y) {
+        return this.layers[layer].getTileRef(x, y);
+    }
 }
 exports.TileBuffer = TileBuffer;
 
@@ -387,6 +430,17 @@ class TileBufferLayer {
             this.tiles[i].deleteAll();
         }
     }
+    setTile(tile, x, y) {
+        this.tiles[y * this.width + x].setEqual(tile);
+    }
+    getTileCopy(x, y) {
+        const tile = new TileSeq_1.TileSeq();
+        tile.setEqual(this.getTileRef(x, y));
+        return tile;
+    }
+    getTileRef(x, y) {
+        return this.tiles[y * this.width + x];
+    }
 }
 exports.TileBufferLayer = TileBufferLayer;
 
@@ -398,6 +452,7 @@ const Tile_1 = require("./Tile");
 class TileSeq {
     constructor() {
         this.frames = [];
+        this.transparent = false;
     }
     deleteAll() {
         this.frames = [];
@@ -416,6 +471,15 @@ class TileSeq {
     }
     isEmpty() {
         return this.frames.length === 0;
+    }
+    setEqual(other) {
+        this.transparent = other.transparent;
+        this.frames = [];
+        for (let i = 0; i < other.frames.length; i++) {
+            const tile = new Tile_1.Tile();
+            tile.setEqual(other.frames[i]);
+            this.frames.push(tile);
+        }
     }
 }
 exports.TileSeq = TileSeq;
@@ -486,7 +550,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CommandExecutor = void 0;
 const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
 const Command_1 = require("../Parser/Command");
-const Tile_1 = require("../Graphics/Tile");
+const TileSeq_1 = require("../Graphics/TileSeq");
 class CommandExecutor {
     constructor(ptm, intp) {
         this.ptm = ptm;
@@ -662,23 +726,26 @@ class CommandExecutor {
         }
     }
     OUT(ptm, intp) {
-        intp.argc(6);
-        const ch = intp.requireNumber(0);
-        const fgc = intp.requireNumber(1);
-        const bgc = intp.requireNumber(2);
-        const x = intp.requireNumber(3);
-        const y = intp.requireNumber(4);
-        const transp = intp.requireNumber(5) > 0;
-        const tile = new Tile_1.Tile();
-        tile.set(ch, fgc, bgc);
+        intp.argc(8);
+        const buf = intp.requireString(0);
+        const ch = intp.requireNumber(1);
+        const fgc = intp.requireNumber(2);
+        const bgc = intp.requireNumber(3);
+        const layer = intp.requireNumber(4);
+        const x = intp.requireNumber(5);
+        const y = intp.requireNumber(6);
+        const transp = intp.requireNumber(7) > 0;
+        const tile = new TileSeq_1.TileSeq();
+        tile.transparent = transp;
+        tile.setSingle(ch, fgc, bgc);
         if (ptm.display) {
-            ptm.display.drawTileFrame(tile, x, y, transp);
+            ptm.display.setTile(buf, layer, x, y, tile, transp);
         }
     }
 }
 exports.CommandExecutor = CommandExecutor;
 
-},{"../Errors/PTM_RuntimeError":3,"../Graphics/Tile":9,"../Parser/Command":18}],16:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Graphics/TileSeq":12,"../Parser/Command":18}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Interpreter = void 0;

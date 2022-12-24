@@ -3,6 +3,7 @@ import { Palette } from "./Palette";
 import { Tile } from "./Tile";
 import { TileBuffer } from "./TileBuffer";
 import { TileBufferLayer } from "./TileBufferLayer";
+import { TileSeq } from "./TileSeq";
 import { Tileset } from "./Tileset";
 import { Viewport } from "./Viewport";
 
@@ -57,6 +58,23 @@ export class Display {
         this.base.update();
     }
 
+    setTile(bufId: string, layer: number, x: number, y: number, tile: TileSeq, transp: boolean) {
+        const buf = this.getBuffer(bufId);
+        if (buf) {
+            buf.layers[layer].setTile(tile, x, y);
+        }
+    }
+
+    getBuffer(id: string): TileBuffer | null {
+        for (let i = 0; i < this.buffers.length; i++) {
+            const buf = this.buffers[i];
+            if (buf.id === id) {
+                return buf;
+            }
+        }
+        return null;
+    }
+
     drawTileFrame(tile: Tile, x: number, y: number, transparent: boolean) {
         this.base.drawTileFrame(tile, x, y, transparent);
     }
@@ -78,12 +96,21 @@ export class Display {
     }
 
     private drawBufferLayer(layer: TileBufferLayer, view: Viewport) {
-        let x = view.displayX;
-        let y = view.displayY;
-        for (let i = 0; i < layer.size; i++) {
-            const tile = layer.tiles[i];
-            if (tile.isEmpty()) {
-                continue;
+        const w = view.width;
+        const h = view.height;
+        let dispX = view.displayX;
+        let dispY = view.displayY;
+        let bufX = view.scrollX;
+        let bufY = view.scrollY;
+        for (let tileY = bufY; tileY < bufY + h; tileY++, dispY++) {
+            for (let tileX = bufX; tileX < bufX + w; tileX++, dispX++) {
+                if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height) {
+                    const tileSeq = layer.getTileRef(tileX, tileY);
+                    if (!tileSeq.isEmpty()) {
+                        const tile = tileSeq.frames[0]; // todo: use animation index
+                        this.drawTileFrame(tile, dispX, dispY, tileSeq.transparent);
+                    }
+                }
             }
         }
     }

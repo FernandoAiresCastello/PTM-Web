@@ -15,4 +15,16 @@ export class Tile {
         this.fgc = fgc;
         this.bgc = bgc;
     }
+
+    setEqual(other: Tile) {
+        this.ix = other.ix;
+        this.fgc = other.fgc;
+        this.bgc = other.bgc;
+    }
+
+    setBlank() {
+        this.ix = 0;
+        this.fgc = 0;
+        this.bgc = 0;
+    }
 }

@@ -6,6 +6,7 @@ import { ProgramLine } from "../Parser/ProgramLine";
 import { Command } from "../Parser/Command";
 import { DisplayBase } from "../Graphics/DisplayBase";
 import { Tile } from "../Graphics/Tile";
+import { TileSeq } from "../Graphics/TileSeq";
 
 export class CommandExecutor {
 
@@ -209,17 +210,20 @@ export class CommandExecutor {
     }
 
     OUT(ptm: PTM, intp: Interpreter) {
-        intp.argc(6);
-        const ch = intp.requireNumber(0);
-        const fgc = intp.requireNumber(1);
-        const bgc = intp.requireNumber(2);
-        const x = intp.requireNumber(3);
-        const y = intp.requireNumber(4);
-        const transp = intp.requireNumber(5) > 0;
-        const tile = new Tile();
-        tile.set(ch, fgc, bgc);
+        intp.argc(8);
+        const buf = intp.requireString(0);
+        const ch = intp.requireNumber(1);
+        const fgc = intp.requireNumber(2);
+        const bgc = intp.requireNumber(3);
+        const layer = intp.requireNumber(4);
+        const x = intp.requireNumber(5);
+        const y = intp.requireNumber(6);
+        const transp = intp.requireNumber(7) > 0;
+        const tile = new TileSeq();
+        tile.transparent = transp;
+        tile.setSingle(ch, fgc, bgc);
         if (ptm.display) {
-            ptm.display.drawTileFrame(tile, x, y, transp);
+            ptm.display.setTile(buf, layer, x, y, tile, transp);
         }
     }
 }

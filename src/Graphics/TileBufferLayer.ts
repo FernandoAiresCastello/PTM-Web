@@ -23,4 +23,18 @@ export class TileBufferLayer {
             this.tiles[i].deleteAll();
         }        
     }
+
+    setTile(tile: TileSeq, x: number, y: number) {
+        this.tiles[y * this.width + x].setEqual(tile);
+    }
+
+    getTileCopy(x: number, y: number): TileSeq {
+        const tile = new TileSeq();
+        tile.setEqual(this.getTileRef(x, y));
+        return tile;
+    }
+
+    getTileRef(x: number, y: number): TileSeq {
+        return this.tiles[y * this.width + x];
+    }
 }

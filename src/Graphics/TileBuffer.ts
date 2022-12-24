@@ -1,4 +1,5 @@
 import { TileBufferLayer } from "./TileBufferLayer";
+import { TileSeq } from "./TileSeq";
 import { Viewport } from "./Viewport";
 
 export class TileBuffer {
@@ -35,5 +36,17 @@ export class TileBuffer {
 
     clearLayer(layer: number) {
         this.layers[layer].clear();
+    }
+
+    setTile(tile: TileSeq, layer: number, x: number, y: number) {
+        this.layers[layer].setTile(tile, x, y);
+    }
+
+    getTileCopy(layer: number, x: number, y: number): TileSeq {
+        return this.layers[layer].getTileCopy(x, y);
+    }
+
+    getTileRef(layer: number, x: number, y: number): TileSeq {
+        return this.layers[layer].getTileRef(x, y);
     }
 }
