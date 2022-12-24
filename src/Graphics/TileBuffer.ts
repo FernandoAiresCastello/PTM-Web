@@ -42,6 +42,16 @@ export class TileBuffer {
         this.layers[layer].setTile(tile, x, y);
     }
 
+    setTileString(str: string, layer: number, x: number, y: number, fgc: number, bgc: number, transp: boolean) {
+        for (let i = 0; i < str.length; i++) {
+            const tile = new TileSeq();
+            const ch = str.charCodeAt(i);
+            tile.transparent = transp;
+            tile.setSingle(ch, fgc, bgc);
+            this.setTile(tile, layer, x + i, y);
+        }
+    }
+
     getTileCopy(layer: number, x: number, y: number): TileSeq {
         return this.layers[layer].getTileCopy(x, y);
     }

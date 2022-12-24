@@ -124,7 +124,7 @@ export class Param {
                 num = Number(str);
             }
         } else if (this.type === ParamType.CharLiteral) {
-            num = this.text.charCodeAt(0);
+            num = Number(this.text);
         } else if (this.type === ParamType.StringLiteral) {
             num = Number(this.text);
         }

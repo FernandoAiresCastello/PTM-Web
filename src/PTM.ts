@@ -12,6 +12,7 @@ import { Tileset } from "./Graphics/Tileset";
 import { Display } from "./Graphics/Display";
 import { Cursor } from "./Graphics/Cursor";
 import { TileSeq } from "./Graphics/TileSeq";
+import { DefaultTileset } from "./Graphics/DefaultTileset";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -47,6 +48,8 @@ export class PTM {
     display: Display | null;
     cursor: Cursor | null;
     currentTile: TileSeq;
+    currentTextFgc: number;
+    currentTextBgc: number;
 
     private readonly logDebugFormat = "color:#0ff";
     private readonly logExecFormat = "color:#ff0";
@@ -79,8 +82,11 @@ export class PTM {
         this.arrays = {};
         this.palette = new Palette();
         this.tileset = new Tileset();
+        DefaultTileset.init(this.tileset);
         this.cursor = null;
         this.currentTile = new TileSeq();
+        this.currentTextFgc = 1;
+        this.currentTextBgc = 0;
 
         this.intervalId = this.start();
     }

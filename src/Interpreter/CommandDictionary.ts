@@ -1,5 +1,5 @@
 import { PTM } from "../PTM"
-import { Command } from "../Parser/Command"
+import { Command } from "./Command"
 import { Interpreter } from "./Interpreter"
 
 export type CommandDictionary = {

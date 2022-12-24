@@ -64,13 +64,6 @@ export class Display {
         this.base.update();
     }
 
-    setTile(bufId: string, layer: number, x: number, y: number, tile: TileSeq, transp: boolean) {
-        const buf = this.getBuffer(bufId);
-        if (buf) {
-            buf.layers[layer].setTile(tile, x, y);
-        }
-    }
-
     getBuffer(id: string): TileBuffer | null {
         for (let i = 0; i < this.buffers.length; i++) {
             const buf = this.buffers[i];

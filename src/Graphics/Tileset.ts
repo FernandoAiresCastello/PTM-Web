@@ -16,8 +16,8 @@ export class Tileset {
         return this.tiles;
     }
 
-    set(ix: number, tile: PixelBlock) {
-        this.tiles[ix] = tile;
+    set(ix: number, r0: number, r1: number, r2: number, r3: number, r4: number, r5: number, r6: number, r7: number) {
+        this.tiles[ix].setPixelRows(r0, r1, r2, r3, r4, r5, r6, r7);
     }
 
     setPixelRow(ix: number, pixelRow: number, byte: number) {

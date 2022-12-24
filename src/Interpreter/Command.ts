@@ -29,5 +29,9 @@ export enum Command {
     PUT = "PUT",
     FILL = "FILL",
     TRON = "TRON",
-    TROFF = "TROFF"
+    TROFF = "TROFF",
+    PRINT = "PRINT",
+    FCOL = "FCOL",
+    BCOL = "BCOL",
+    COLOR = "COLOR"
 }

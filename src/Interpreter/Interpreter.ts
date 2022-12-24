@@ -1,7 +1,7 @@
 import { PTM_RuntimeError } from "../Errors/PTM_RuntimeError";
 import { ColorString } from "../Graphics/ColorTypes";
 import { PTM } from "../PTM";
-import { Command } from "../Parser/Command";
+import { Command } from "./Command";
 import { Param } from "../Parser/Param";
 import { ParamType } from "../Parser/ParamType";
 import { Program } from "../Parser/Program";
@@ -142,7 +142,11 @@ export class Interpreter {
     requireNumber(paramIx: number): number {
         const param = this.programLine.params[paramIx];
         if (param.type === ParamType.StringLiteral) {
-            return param.number;
+            if (Number.isNaN(param.number)) {
+                throw new PTM_RuntimeError(`Could not convert string to number: "${param.text}"`, this.programLine);
+            } else {
+                return param.number;
+            }
         } else if (param.type === ParamType.CharLiteral) {
             return param.number;
         } else if (param.type === ParamType.NumberLiteral) {

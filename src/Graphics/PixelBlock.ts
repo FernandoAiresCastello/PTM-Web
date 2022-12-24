@@ -39,6 +39,17 @@ export class PixelBlock {
         this.pixels = newPixels;
     }
 
+    setPixelRows(r0: number, r1: number, r2: number, r3: number, r4: number, r5: number, r6: number, r7: number) {
+        this.setPixelRow(0, r0);
+        this.setPixelRow(1, r1);
+        this.setPixelRow(2, r2);
+        this.setPixelRow(3, r3);
+        this.setPixelRow(4, r4);
+        this.setPixelRow(5, r5);
+        this.setPixelRow(6, r6);
+        this.setPixelRow(7, r7);
+    }
+
     getRowAsByte(pixelRow: number): number {
         const binary = this.getRowAsBinaryString(pixelRow);
         const rowPixels = Number.parseInt(binary, 2);

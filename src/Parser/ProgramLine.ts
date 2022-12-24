@@ -1,5 +1,5 @@
 import { ProgramLineType } from "./ProgramLineType";
-import { Command } from "./Command";
+import { Command } from "../Interpreter/Command";
 import { Param } from "./Param";
 import { ExecutionTime } from "./ExecutionTime";
 

@@ -1,7 +1,7 @@
 import { PTM_ParseError } from "../Errors/PTM_ParseError";
 import { Interpreter } from "../Interpreter/Interpreter";
 import { PTM } from "../PTM";
-import { Command } from "./Command";
+import { Command } from "../Interpreter/Command";
 import { ExecutionTime } from "./ExecutionTime";
 import { Param } from "./Param";
 import { Program } from "./Program";

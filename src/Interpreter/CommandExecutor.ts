@@ -3,7 +3,7 @@ import { PTM_RuntimeError } from "../Errors/PTM_RuntimeError";
 import { Interpreter } from "./Interpreter";
 import { CommandDictionary } from "./CommandDictionary";
 import { ProgramLine } from "../Parser/ProgramLine";
-import { Command } from "../Parser/Command";
+import { Command } from "./Command";
 import { TileSeq } from "../Graphics/TileSeq";
 
 export class CommandExecutor {
@@ -49,7 +49,11 @@ export class CommandExecutor {
             [Command.PUT]: this.PUT,
             [Command.FILL]: this.FILL,
             [Command.TRON]: this.TRON,
-            [Command.TROFF]: this.TROFF
+            [Command.TROFF]: this.TROFF,
+            [Command.PRINT]: this.PRINT,
+            [Command.FCOL]: this.FCOL,
+            [Command.BCOL]: this.BCOL,
+            [Command.COLOR]: this.COLOR
         };
     }
 
@@ -297,5 +301,36 @@ export class CommandExecutor {
     TROFF(ptm: PTM, intp: Interpreter) {
         intp.argc(0);
         ptm.currentTile.transparent = false;
+    }
+
+    PRINT(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const text = intp.requireString(0);
+        if (ptm.cursor && ptm.display) {
+            ptm.cursor.buffer.setTileString(
+                text, ptm.cursor.layer, ptm.cursor.x, ptm.cursor.y, 
+                ptm.currentTextFgc, ptm.currentTextBgc, ptm.currentTile.transparent);
+            ptm.cursor.x += text.length;
+        }
+    }
+
+    FCOL(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const color = intp.requireNumber(0);
+        ptm.currentTextFgc = color;
+    }
+
+    BCOL(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const color = intp.requireNumber(0);
+        ptm.currentTextBgc = color;
+    }
+
+    COLOR(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const fgc = intp.requireNumber(0);
+        const bgc = intp.requireNumber(1);
+        ptm.currentTextFgc = fgc;
+        ptm.currentTextBgc = bgc;
     }
 }

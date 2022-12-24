@@ -15,7 +15,7 @@
     PAL 3,&h00ff00
     PAL 4,&h0000ff
     PAL 5,&hffff00
-    PAL 6,&hff00ff
+    PAL 6,&hffd000
 
     CHR 1,0,&b11111111
     CHR 1,1,&b10000001
@@ -26,14 +26,14 @@
     CHR 1,6,&b10000001
     CHR 1,7,&b11111111
 
-    CHR 2,0,&b00000001
+    CHR 2,0,&b00000000
     CHR 2,1,&b00000001
     CHR 2,2,&b00000001
     CHR 2,3,&b00000001
     CHR 2,4,&b00000001
     CHR 2,5,&b00000001
     CHR 2,6,&b00000001
-    CHR 2,7,&b11111111
+    CHR 2,7,&b01111111
 
     WCOL 5
 
@@ -41,22 +41,13 @@
     BUF.VIEW 1,1,30,22
     LAYER 0
     TILE.NEW 2,6,1
-    FILL
-    LAYER 1
-    
-    TILE.NEW 1,2,3
-    LOCATE 0,0
-    PUT
-    TILE.NEW 1,3,4
-    LOCATE 1,1
-    PUT
     TRON
-    TILE.NEW 1,4,2
-    LOCATE 2,2
-    PUT
+    FILL
     TROFF
-    LOCATE 3,3
-    PUT
+    LAYER 1
+    COLOR 2,4
+    LOCATE 1,1
+    PRINT "Hello World!"
 
     VSYNC
 

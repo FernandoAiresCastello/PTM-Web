@@ -25,8 +25,8 @@ export class TileBufferLayer {
     }
 
     setTile(tile: TileSeq, x: number, y: number) {
-        const pos = y * this.width + x;
-        if (pos >= 0 && pos < this.tiles.length) {
+        if (x >= 0 && y >= 0 && x < this.width && y < this.height) {
+            const pos = y * this.width + x;
             this.tiles[pos].setEqual(tile);
         }
     }
