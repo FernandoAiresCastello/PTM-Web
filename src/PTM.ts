@@ -1,4 +1,3 @@
-import { PTM_InitializationError } from "./Errors/PTM_InitializationError";
 import { Parser } from "./Parser/Parser";
 import { Program } from "./Parser/Program";
 import { CommandExecutor } from "./Interpreter/CommandExecutor";
@@ -13,31 +12,9 @@ import { Display } from "./Graphics/Display";
 import { Cursor } from "./Graphics/Cursor";
 import { TileSeq } from "./Graphics/TileSeq";
 import { DefaultTileset } from "./Graphics/DefaultTileset";
+import { PTM_Main } from "./main";
 
-document.addEventListener("DOMContentLoaded", () => {
-
-    console.log("%c" +
-        "=======================================================\n" +
-        "  ~ Welcome to the PTM - Programmable Tile Machine! ~  \n" +
-        "    Developed by: Fernando Aires Castello  (C) 2022    \n" +
-        "=======================================================",
-        "color:#0f0"
-    );
-
-    let ptmlElement = document.querySelector('script[type="text/ptml"]');
-    if (ptmlElement === null || ptmlElement.textContent === null) {
-        throw new PTM_InitializationError("PTML script tag not found");
-    }
-    console.log("PTML script loaded");
-
-    let displayElement = document.getElementById("display");
-    if (displayElement === null) {
-        throw new PTM_InitializationError("Display element not found");
-    }
-    console.log("Display element found");
-
-    (window as any).PTM = new PTM(displayElement, ptmlElement.textContent);
-});
+document.addEventListener("DOMContentLoaded", PTM_Main);
 
 export class PTM {
 

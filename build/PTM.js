@@ -1282,7 +1282,6 @@ exports.Interpreter = Interpreter;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
-const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
 const Parser_1 = require("./Parser/Parser");
 const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
 const Interpreter_1 = require("./Interpreter/Interpreter");
@@ -1293,24 +1292,8 @@ const Display_1 = require("./Graphics/Display");
 const Cursor_1 = require("./Graphics/Cursor");
 const TileSeq_1 = require("./Graphics/TileSeq");
 const DefaultTileset_1 = require("./Graphics/DefaultTileset");
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("%c" +
-        "=======================================================\n" +
-        "  ~ Welcome to the PTM - Programmable Tile Machine! ~  \n" +
-        "    Developed by: Fernando Aires Castello  (C) 2022    \n" +
-        "=======================================================", "color:#0f0");
-    let ptmlElement = document.querySelector('script[type="text/ptml"]');
-    if (ptmlElement === null || ptmlElement.textContent === null) {
-        throw new PTM_InitializationError_1.PTM_InitializationError("PTML script tag not found");
-    }
-    console.log("PTML script loaded");
-    let displayElement = document.getElementById("display");
-    if (displayElement === null) {
-        throw new PTM_InitializationError_1.PTM_InitializationError("Display element not found");
-    }
-    console.log("Display element found");
-    window.PTM = new PTM(displayElement, ptmlElement.textContent);
-});
+const main_1 = require("./main");
+document.addEventListener("DOMContentLoaded", main_1.PTM_Main);
 class PTM {
     constructor(displayElement, srcPtml) {
         this.logDebugFormat = "color:#0ff";
@@ -1441,7 +1424,7 @@ class PTM {
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_InitializationError":1,"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultTileset":6,"./Graphics/Display":7,"./Graphics/Palette":9,"./Graphics/TileSeq":14,"./Graphics/Tileset":15,"./Interpreter/CommandExecutor":18,"./Interpreter/Interpreter":19,"./Parser/Parser":25}],21:[function(require,module,exports){
+},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultTileset":6,"./Graphics/Display":7,"./Graphics/Palette":9,"./Graphics/TileSeq":14,"./Graphics/Tileset":15,"./Interpreter/CommandExecutor":18,"./Interpreter/Interpreter":19,"./Parser/Parser":25,"./main":29}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -1818,4 +1801,49 @@ var ProgramLineType;
     ProgramLineType["Label"] = "Label";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}]},{},[20]);
+},{}],29:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.PTM_Main = void 0;
+const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
+const PTM_1 = require("./PTM");
+function PTM_Main() {
+    console.log("%c" +
+        "=======================================================\n" +
+        "  ~ Welcome to the PTM - Programmable Tile Machine! ~  \n" +
+        "    Developed by: Fernando Aires Castello  (C) 2022    \n" +
+        "=======================================================", "color:#0f0");
+    const ptmlElement = document.querySelector('script[type="text/ptml"]');
+    if (ptmlElement && ptmlElement.textContent) {
+        console.log("PTML code loaded from script tag");
+        const displayElement = document.getElementById("display");
+        if (!displayElement) {
+            throw new PTM_InitializationError_1.PTM_InitializationError("Display element not found");
+        }
+        window.PTM = new PTM_1.PTM(displayElement, ptmlElement.textContent);
+    }
+    else {
+        throw new PTM_InitializationError_1.PTM_InitializationError("PTML script tag not found");
+        /*
+        (window as any).PTM_Run = function() {
+            if ((window as any).PTM) {
+                (window as any).PTM.reset();
+                document.getElementById("display")?.remove();
+            }
+            const ptmlTextArea = document.querySelector('textarea[id="ptml"]') as HTMLTextAreaElement;
+            if (ptmlTextArea) {
+                console.log("PTML code loaded from textarea");
+                const displayElement = document.getElementById("display");
+                if (!displayElement) {
+                    throw new PTM_InitializationError("Display element not found");
+                }
+                (window as any).PTM = new PTM(displayElement, ptmlTextArea.value);
+            } else {
+                throw new PTM_InitializationError("PTML textarea not found");
+            }
+        }*/
+    }
+}
+exports.PTM_Main = PTM_Main;
+
+},{"./Errors/PTM_InitializationError":1,"./PTM":20}]},{},[20]);
