@@ -23,7 +23,7 @@ export class CommandExecutor {
             [Command.TEST]: this.TEST,
             [Command.DBG]: this.DBG,
             [Command.DATA]: this.DATA,
-            [Command.HALT]: this.HALT,
+            [Command.EXIT]: this.EXIT,
             [Command.RESET]: this.RESET,
             [Command.TITLE]: this.TITLE,
             [Command.SCREEN]: this.SCREEN,
@@ -46,6 +46,7 @@ export class CommandExecutor {
             [Command.LAYER]: this.LAYER,
             [Command.LOCATE]: this.LOCATE,
             [Command.TILE_NEW]: this.TILE_NEW,
+            [Command.TILE_ADD]: this.TILE_ADD,
             [Command.PUT]: this.PUT,
             [Command.FILL]: this.FILL,
             [Command.TRON]: this.TRON,
@@ -88,9 +89,9 @@ export class CommandExecutor {
     DATA(ptm: PTM, intp: Interpreter) {
     }
 
-    HALT(ptm: PTM, intp: Interpreter) {
+    EXIT(ptm: PTM, intp: Interpreter) {
         intp.argc(0);
-        ptm.stop("Halt requested");
+        ptm.stop("Exit requested");
     }
 
     RESET(ptm: PTM, intp: Interpreter) {
@@ -263,6 +264,14 @@ export class CommandExecutor {
         const fgc = intp.requireNumber(1);
         const bgc = intp.requireNumber(2);
         ptm.currentTile.setSingle(ch, fgc, bgc);
+    }
+
+    TILE_ADD(ptm: PTM, intp: Interpreter) {
+        intp.argc(3);
+        const ch = intp.requireNumber(0);
+        const fgc = intp.requireNumber(1);
+        const bgc = intp.requireNumber(2);
+        ptm.currentTile.add(ch, fgc, bgc);
     }
 
     LOCATE(ptm: PTM, intp: Interpreter) {

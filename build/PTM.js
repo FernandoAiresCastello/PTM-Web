@@ -190,11 +190,12 @@ exports.Display = void 0;
 const DisplayBase_1 = require("./DisplayBase");
 const TileBuffer_1 = require("./TileBuffer");
 class Display {
-    constructor(displayElement, width, height, hStretch, vStretch, defaultBufLayers, palette, tileset) {
+    constructor(displayElement, width, height, hStretch, vStretch, defaultBufLayers, palette, tileset, animationInterval) {
         this.animationFrameIndex = 0;
         this.base = new DisplayBase_1.DisplayBase(displayElement, width, height, hStretch, vStretch, palette, tileset);
         this.buffers = [];
         this.createDefaultBuffer(defaultBufLayers);
+        window.setInterval(this.advanceTileAnimation, animationInterval, this);
     }
     createDefaultBuffer(defaultBufLayers) {
         this.createNewBuffer("default", defaultBufLayers, this.base.cols, this.base.rows, 0, 0);
@@ -239,6 +240,16 @@ class Display {
             }
         }
         return null;
+    }
+    advanceTileAnimation(display) {
+        if (!display) {
+            display = this;
+        }
+        display.animationFrameIndex++;
+        if (display.animationFrameIndex >= Number.MAX_SAFE_INTEGER) {
+            display.animationFrameIndex = 0;
+        }
+        display.update();
     }
     drawTileFrame(tile, x, y, transparent) {
         this.base.drawTileFrame(tile, x, y, transparent);
@@ -721,7 +732,7 @@ var Command;
     Command["TEST"] = "TEST";
     Command["DBG"] = "DBG";
     Command["DATA"] = "DATA";
-    Command["HALT"] = "HALT";
+    Command["EXIT"] = "EXIT";
     Command["RESET"] = "RESET";
     Command["TITLE"] = "TITLE";
     Command["SCREEN"] = "SCREEN";
@@ -743,6 +754,7 @@ var Command;
     Command["BUF_VIEW"] = "BUF.VIEW";
     Command["LAYER"] = "LAYER";
     Command["TILE_NEW"] = "TILE.NEW";
+    Command["TILE_ADD"] = "TILE.ADD";
     Command["LOCATE"] = "LOCATE";
     Command["PUT"] = "PUT";
     Command["FILL"] = "FILL";
@@ -771,7 +783,7 @@ class CommandExecutor {
             [Command_1.Command.TEST]: this.TEST,
             [Command_1.Command.DBG]: this.DBG,
             [Command_1.Command.DATA]: this.DATA,
-            [Command_1.Command.HALT]: this.HALT,
+            [Command_1.Command.EXIT]: this.EXIT,
             [Command_1.Command.RESET]: this.RESET,
             [Command_1.Command.TITLE]: this.TITLE,
             [Command_1.Command.SCREEN]: this.SCREEN,
@@ -794,6 +806,7 @@ class CommandExecutor {
             [Command_1.Command.LAYER]: this.LAYER,
             [Command_1.Command.LOCATE]: this.LOCATE,
             [Command_1.Command.TILE_NEW]: this.TILE_NEW,
+            [Command_1.Command.TILE_ADD]: this.TILE_ADD,
             [Command_1.Command.PUT]: this.PUT,
             [Command_1.Command.FILL]: this.FILL,
             [Command_1.Command.TRON]: this.TRON,
@@ -833,9 +846,9 @@ class CommandExecutor {
     }
     DATA(ptm, intp) {
     }
-    HALT(ptm, intp) {
+    EXIT(ptm, intp) {
         intp.argc(0);
-        ptm.stop("Halt requested");
+        ptm.stop("Exit requested");
     }
     RESET(ptm, intp) {
         intp.argc(0);
@@ -988,6 +1001,13 @@ class CommandExecutor {
         const fgc = intp.requireNumber(1);
         const bgc = intp.requireNumber(2);
         ptm.currentTile.setSingle(ch, fgc, bgc);
+    }
+    TILE_ADD(ptm, intp) {
+        intp.argc(3);
+        const ch = intp.requireNumber(0);
+        const fgc = intp.requireNumber(1);
+        const bgc = intp.requireNumber(2);
+        ptm.currentTile.add(ch, fgc, bgc);
     }
     LOCATE(ptm, intp) {
         intp.argc(2);
@@ -1299,7 +1319,8 @@ class PTM {
         this.logDebugFormat = "color:#0ff";
         this.logExecFormat = "color:#ff0";
         this.trace = false;
-        this.intervalLength = 1;
+        this.cycleInterval = 1;
+        this.animationInterval = 400;
         this.displayElement = displayElement;
         this.display = null;
         this.parser = new Parser_1.Parser(this, srcPtml);
@@ -1348,7 +1369,7 @@ class PTM {
     }
     start() {
         this.logInfo("Interpreter started");
-        return window.setInterval(() => this.cycle(), this.intervalLength);
+        return window.setInterval(() => this.cycle(), this.cycleInterval);
     }
     cycle() {
         if (this.programPtr >= this.program.length()) {
@@ -1417,7 +1438,7 @@ class PTM {
             }
         }
         else {
-            this.display = new Display_1.Display(this.displayElement, width, height, hStretch, vStretch, defaultBufLayers, this.palette, this.tileset);
+            this.display = new Display_1.Display(this.displayElement, width, height, hStretch, vStretch, defaultBufLayers, this.palette, this.tileset, this.animationInterval);
             this.cursor = new Cursor_1.Cursor(this.display.getDefaultBuffer());
         }
     }

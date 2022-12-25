@@ -7,7 +7,28 @@
 <div id="display"></div>
 <script type="text/ptml">
 
+    CALL init_gfx
     SCREEN 256,192,3,3,2
+
+    WCOL 1
+
+    TILE.NEW '1',1,2
+    TILE.ADD '2',3,4
+    TILE.ADD '3',5,6
+    LOCATE 0,0
+    PUT
+    LOCATE 1,1
+    PUT
+    LOCATE 2,2
+    PUT
+    LOCATE 3,3
+    PUT
+
+    VSYNC
+    
+    EXIT
+
+init_gfx:
 
     PAL 0,&h000000
     PAL 1,&hffffff
@@ -26,30 +47,16 @@
     CHR 1,6,&b10000001
     CHR 1,7,&b11111111
 
-    CHR 2,0,&b00000000
-    CHR 2,1,&b00000001
-    CHR 2,2,&b00000001
-    CHR 2,3,&b00000001
-    CHR 2,4,&b00000001
-    CHR 2,5,&b00000001
-    CHR 2,6,&b00000001
-    CHR 2,7,&b01111111
+    CHR 2,0,&b11111110
+    CHR 2,1,&b10000010
+    CHR 2,2,&b10111010
+    CHR 2,3,&b10111010
+    CHR 2,4,&b10111010
+    CHR 2,5,&b10000010
+    CHR 2,6,&b11111110
+    CHR 2,7,&b00000000
 
-    WCOL 5
-
-    BUF.SEL "default"
-    BUF.VIEW 1,1,30,22
-    LAYER 0
-    TILE.NEW 2,6,1
-    TRON
-    FILL
-    TROFF
-    LAYER 1
-    COLOR 2,4
-    LOCATE 1,1
-    PRINT "Hello World!"
-
-    VSYNC
+    RET
 
 </script>
 </body>

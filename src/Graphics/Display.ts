@@ -3,7 +3,6 @@ import { Palette } from "./Palette";
 import { Tile } from "./Tile";
 import { TileBuffer } from "./TileBuffer";
 import { TileBufferLayer } from "./TileBufferLayer";
-import { TileSeq } from "./TileSeq";
 import { Tileset } from "./Tileset";
 import { Viewport } from "./Viewport";
 
@@ -14,11 +13,17 @@ export class Display {
     private animationFrameIndex: number = 0;
 
     constructor(displayElement: HTMLElement, 
-        width: number, height: number, hStretch: number, vStretch: number, defaultBufLayers: number, palette: Palette, tileset: Tileset) {
+        width: number, height: number, 
+        hStretch: number, vStretch: number, 
+        defaultBufLayers: number, 
+        palette: Palette, tileset: Tileset,
+        animationInterval: number) {
 
         this.base = new DisplayBase(displayElement, width, height, hStretch, vStretch, palette, tileset);
         this.buffers = [];
         this.createDefaultBuffer(defaultBufLayers);
+
+        window.setInterval(this.advanceTileAnimation, animationInterval, this);
     }
 
     private createDefaultBuffer(defaultBufLayers: number) {
@@ -72,6 +77,17 @@ export class Display {
             }
         }
         return null;
+    }
+
+    advanceTileAnimation(display: Display) {
+        if (!display) {
+            display = this;
+        }
+        display.animationFrameIndex++;
+        if (display.animationFrameIndex >= Number.MAX_SAFE_INTEGER) {
+            display.animationFrameIndex = 0;
+        }
+        display.update();
     }
 
     drawTileFrame(tile: Tile, x: number, y: number, transparent: boolean) {

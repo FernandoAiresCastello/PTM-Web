@@ -31,7 +31,8 @@ export class PTM {
     private readonly logDebugFormat = "color:#0ff";
     private readonly logExecFormat = "color:#ff0";
     private readonly trace: boolean = false;
-    private readonly intervalLength: number = 1;
+    private readonly cycleInterval: number = 1;
+    private readonly animationInterval: number = 400;
     readonly executor: CommandExecutor;
     readonly intp: Interpreter;
     private readonly parser: Parser;
@@ -97,7 +98,7 @@ export class PTM {
 
     start(): number {
         this.logInfo("Interpreter started");
-        return window.setInterval(() => this.cycle(), this.intervalLength);
+        return window.setInterval(() => this.cycle(), this.cycleInterval);
     }
 
     cycle() {
@@ -167,7 +168,9 @@ export class PTM {
                 this.cursor.set(this.display.getDefaultBuffer(), 0, 0, 0);
             }
         } else {
-            this.display = new Display(this.displayElement, width, height, hStretch, vStretch, defaultBufLayers, this.palette, this.tileset);
+            this.display = new Display(this.displayElement, 
+                width, height, hStretch, vStretch, defaultBufLayers, 
+                this.palette, this.tileset, this.animationInterval);
             this.cursor = new Cursor(this.display.getDefaultBuffer());
         }
     }
