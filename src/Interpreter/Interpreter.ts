@@ -26,7 +26,7 @@ export class Interpreter {
         return Object.values(Command).includes(cmd as Command);
     }
 
-    arg(paramIx: number): Param {
+    getArg(paramIx: number): Param {
         return this.programLine.params[paramIx];
     }
 

@@ -4,7 +4,6 @@ import { Interpreter } from "./Interpreter";
 import { CommandDictionary } from "./CommandDictionary";
 import { ProgramLine } from "../Parser/ProgramLine";
 import { Command } from "./Command";
-import { TileSeq } from "../Graphics/TileSeq";
 
 export class CommandExecutor {
 
@@ -43,6 +42,7 @@ export class CommandExecutor {
             [Command.VSYNC]: this.VSYNC,
             [Command.BUF_SEL]: this.BUF_SEL,
             [Command.BUF_VIEW]: this.BUF_VIEW,
+            [Command.BUF_SCRL]: this.BUF_SCRL,
             [Command.LAYER]: this.LAYER,
             [Command.LOCATE]: this.LOCATE,
             [Command.TILE_NEW]: this.TILE_NEW,
@@ -52,6 +52,7 @@ export class CommandExecutor {
             [Command.TRON]: this.TRON,
             [Command.TROFF]: this.TROFF,
             [Command.PRINT]: this.PRINT,
+            [Command.PRINT_ADD]: this.PRINT_ADD,
             [Command.FCOL]: this.FCOL,
             [Command.BCOL]: this.BCOL,
             [Command.COLOR]: this.COLOR
@@ -70,17 +71,17 @@ export class CommandExecutor {
         }
     }
 
-    TEST(ptm: PTM, intp: Interpreter) {
+    TEST(ptm: PTM, intp: Interpreter) { // Used only for internal testing
     }
 
     DBG(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         if (intp.isArray(0)) {
-            const arrId = intp.arg(0).text;
+            const arrId = intp.getArg(0).text;
             const arr = intp.requireExistingArray(0);
             ptm.logDebug(arrId, arr);
         } else {
-            const varId = intp.arg(0).text;
+            const varId = intp.getArg(0).text;
             const value = intp.requireString(0);
             ptm.logDebug(varId, value);
         }
@@ -245,6 +246,15 @@ export class CommandExecutor {
         }
     }
 
+    BUF_SCRL(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const dx = intp.requireNumber(0);
+        const dy = intp.requireNumber(1);
+        if (ptm.cursor) {
+            ptm.cursor.buffer.view.scroll(dx, dy);
+        }
+    }
+
     LAYER(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         const layer = intp.requireNumber(0);
@@ -317,6 +327,17 @@ export class CommandExecutor {
         const text = intp.requireString(0);
         if (ptm.cursor && ptm.display) {
             ptm.cursor.buffer.setTileString(
+                text, ptm.cursor.layer, ptm.cursor.x, ptm.cursor.y, 
+                ptm.currentTextFgc, ptm.currentTextBgc, ptm.currentTile.transparent);
+            ptm.cursor.x += text.length;
+        }
+    }
+
+    PRINT_ADD(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const text = intp.requireString(0);
+        if (ptm.cursor && ptm.display) {
+            ptm.cursor.buffer.overlapTileString(
                 text, ptm.cursor.layer, ptm.cursor.x, ptm.cursor.y, 
                 ptm.currentTextFgc, ptm.currentTextBgc, ptm.currentTile.transparent);
             ptm.cursor.x += text.length;

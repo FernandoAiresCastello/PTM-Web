@@ -10,22 +10,14 @@
     CALL init_gfx
     SCREEN 256,192,3,3,2
 
-    WCOL 1
-
-    TILE.NEW '1',1,2
-    TILE.ADD '2',3,4
-    TILE.ADD '3',5,6
     LOCATE 0,0
-    PUT
-    LOCATE 1,1
-    PUT
-    LOCATE 2,2
-    PUT
-    LOCATE 3,3
-    PUT
-
+    COLOR 2,3
+    PRINT "Hello World!"
+    COLOR 4,5
+    LOCATE 0,0
+    PRINT.ADD "Hello World!"
     VSYNC
-    
+
     EXIT
 
 init_gfx:

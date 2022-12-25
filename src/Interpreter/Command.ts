@@ -23,6 +23,7 @@ export enum Command {
     VSYNC = "VSYNC",
     BUF_SEL = "BUF.SEL",
     BUF_VIEW = "BUF.VIEW",
+    BUF_SCRL = "BUF.SCRL",
     LAYER = "LAYER",
     TILE_NEW = "TILE.NEW",
     TILE_ADD = "TILE.ADD",
@@ -32,6 +33,7 @@ export enum Command {
     TRON = "TRON",
     TROFF = "TROFF",
     PRINT = "PRINT",
+    PRINT_ADD = "PRINT.ADD",
     FCOL = "FCOL",
     BCOL = "BCOL",
     COLOR = "COLOR"

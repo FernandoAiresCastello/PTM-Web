@@ -579,6 +579,14 @@ class TileBuffer {
             this.setTile(tile, layer, x + i, y);
         }
     }
+    overlapTileString(str, layer, x, y, fgc, bgc, transp) {
+        for (let i = 0; i < str.length; i++) {
+            const tile = this.getTileRef(layer, x + i, y);
+            const ch = str.charCodeAt(i);
+            tile.transparent = transp;
+            tile.add(ch, fgc, bgc);
+        }
+    }
     getTileCopy(layer, x, y) {
         return this.layers[layer].getTileCopy(x, y);
     }
@@ -752,6 +760,7 @@ var Command;
     Command["VSYNC"] = "VSYNC";
     Command["BUF_SEL"] = "BUF.SEL";
     Command["BUF_VIEW"] = "BUF.VIEW";
+    Command["BUF_SCRL"] = "BUF.SCRL";
     Command["LAYER"] = "LAYER";
     Command["TILE_NEW"] = "TILE.NEW";
     Command["TILE_ADD"] = "TILE.ADD";
@@ -761,6 +770,7 @@ var Command;
     Command["TRON"] = "TRON";
     Command["TROFF"] = "TROFF";
     Command["PRINT"] = "PRINT";
+    Command["PRINT_ADD"] = "PRINT.ADD";
     Command["FCOL"] = "FCOL";
     Command["BCOL"] = "BCOL";
     Command["COLOR"] = "COLOR";
@@ -803,6 +813,7 @@ class CommandExecutor {
             [Command_1.Command.VSYNC]: this.VSYNC,
             [Command_1.Command.BUF_SEL]: this.BUF_SEL,
             [Command_1.Command.BUF_VIEW]: this.BUF_VIEW,
+            [Command_1.Command.BUF_SCRL]: this.BUF_SCRL,
             [Command_1.Command.LAYER]: this.LAYER,
             [Command_1.Command.LOCATE]: this.LOCATE,
             [Command_1.Command.TILE_NEW]: this.TILE_NEW,
@@ -812,6 +823,7 @@ class CommandExecutor {
             [Command_1.Command.TRON]: this.TRON,
             [Command_1.Command.TROFF]: this.TROFF,
             [Command_1.Command.PRINT]: this.PRINT,
+            [Command_1.Command.PRINT_ADD]: this.PRINT_ADD,
             [Command_1.Command.FCOL]: this.FCOL,
             [Command_1.Command.BCOL]: this.BCOL,
             [Command_1.Command.COLOR]: this.COLOR
@@ -834,12 +846,12 @@ class CommandExecutor {
     DBG(ptm, intp) {
         intp.argc(1);
         if (intp.isArray(0)) {
-            const arrId = intp.arg(0).text;
+            const arrId = intp.getArg(0).text;
             const arr = intp.requireExistingArray(0);
             ptm.logDebug(arrId, arr);
         }
         else {
-            const varId = intp.arg(0).text;
+            const varId = intp.getArg(0).text;
             const value = intp.requireString(0);
             ptm.logDebug(varId, value);
         }
@@ -983,6 +995,14 @@ class CommandExecutor {
             ptm.cursor.buffer.view.set(x, y, w, h);
         }
     }
+    BUF_SCRL(ptm, intp) {
+        intp.argc(2);
+        const dx = intp.requireNumber(0);
+        const dy = intp.requireNumber(1);
+        if (ptm.cursor) {
+            ptm.cursor.buffer.view.scroll(dx, dy);
+        }
+    }
     LAYER(ptm, intp) {
         intp.argc(1);
         const layer = intp.requireNumber(0);
@@ -1049,6 +1069,14 @@ class CommandExecutor {
             ptm.cursor.x += text.length;
         }
     }
+    PRINT_ADD(ptm, intp) {
+        intp.argc(1);
+        const text = intp.requireString(0);
+        if (ptm.cursor && ptm.display) {
+            ptm.cursor.buffer.overlapTileString(text, ptm.cursor.layer, ptm.cursor.x, ptm.cursor.y, ptm.currentTextFgc, ptm.currentTextBgc, ptm.currentTile.transparent);
+            ptm.cursor.x += text.length;
+        }
+    }
     FCOL(ptm, intp) {
         intp.argc(1);
         const color = intp.requireNumber(0);
@@ -1087,7 +1115,7 @@ class Interpreter {
     static commandExists(cmd) {
         return Object.values(Command_1.Command).includes(cmd);
     }
-    arg(paramIx) {
+    getArg(paramIx) {
         return this.programLine.params[paramIx];
     }
     argc(expectedArgc) {
@@ -1340,7 +1368,7 @@ class PTM {
         this.currentTile = new TileSeq_1.TileSeq();
         this.currentTextFgc = 1;
         this.currentTextBgc = 0;
-        this.intervalId = this.start();
+        this.cycleIntervalId = this.start();
     }
     logInfo(msg) {
         console.log(msg);
@@ -1393,7 +1421,7 @@ class PTM {
         }
     }
     stop(reason) {
-        window.clearInterval(this.intervalId);
+        window.clearInterval(this.cycleIntervalId);
         let msg = "Interpreter exited";
         if (reason) {
             msg += `\nReason: ${reason}`;
@@ -1830,40 +1858,21 @@ const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
 const PTM_1 = require("./PTM");
 function PTM_Main() {
     console.log("%c" +
-        "=======================================================\n" +
-        "  ~ Welcome to the PTM - Programmable Tile Machine! ~  \n" +
-        "    Developed by: Fernando Aires Castello  (C) 2022    \n" +
-        "=======================================================", "color:#0f0");
+        "==================================================\n" +
+        "  Welcome to the PTM - Programmable Tile Machine! \n" +
+        "  Developed by: Fernando Aires Castello  (C) 2022 \n" +
+        "==================================================", "color:#0f0");
     const ptmlElement = document.querySelector('script[type="text/ptml"]');
-    if (ptmlElement && ptmlElement.textContent) {
-        console.log("PTML code loaded from script tag");
-        const displayElement = document.getElementById("display");
-        if (!displayElement) {
-            throw new PTM_InitializationError_1.PTM_InitializationError("Display element not found");
-        }
-        window.PTM = new PTM_1.PTM(displayElement, ptmlElement.textContent);
-    }
-    else {
+    if (!ptmlElement || !ptmlElement.textContent) {
         throw new PTM_InitializationError_1.PTM_InitializationError("PTML script tag not found");
-        /*
-        (window as any).PTM_Run = function() {
-            if ((window as any).PTM) {
-                (window as any).PTM.reset();
-                document.getElementById("display")?.remove();
-            }
-            const ptmlTextArea = document.querySelector('textarea[id="ptml"]') as HTMLTextAreaElement;
-            if (ptmlTextArea) {
-                console.log("PTML code loaded from textarea");
-                const displayElement = document.getElementById("display");
-                if (!displayElement) {
-                    throw new PTM_InitializationError("Display element not found");
-                }
-                (window as any).PTM = new PTM(displayElement, ptmlTextArea.value);
-            } else {
-                throw new PTM_InitializationError("PTML textarea not found");
-            }
-        }*/
     }
+    console.log("PTML code loaded from script tag");
+    const displayElement = document.getElementById("display");
+    if (!displayElement) {
+        throw new PTM_InitializationError_1.PTM_InitializationError("Display element not found");
+    }
+    console.log("Display element found");
+    window.PTM = new PTM_1.PTM(displayElement, ptmlElement.textContent);
 }
 exports.PTM_Main = PTM_Main;
 

@@ -52,6 +52,15 @@ export class TileBuffer {
         }
     }
 
+    overlapTileString(str: string, layer: number, x: number, y: number, fgc: number, bgc: number, transp: boolean) {
+        for (let i = 0; i < str.length; i++) {
+            const tile = this.getTileRef(layer, x + i, y);
+            const ch = str.charCodeAt(i);
+            tile.transparent = transp;
+            tile.add(ch, fgc, bgc);
+        }
+    }
+
     getTileCopy(layer: number, x: number, y: number): TileSeq {
         return this.layers[layer].getTileCopy(x, y);
     }

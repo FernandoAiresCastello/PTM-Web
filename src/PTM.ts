@@ -37,7 +37,7 @@ export class PTM {
     readonly intp: Interpreter;
     private readonly parser: Parser;
     private readonly program: Program;
-    private readonly intervalId: number;
+    private readonly cycleIntervalId: number;
     private programPtr: number;
     private branching: boolean;
     private currentLine: ProgramLine | null;
@@ -66,7 +66,7 @@ export class PTM {
         this.currentTextFgc = 1;
         this.currentTextBgc = 0;
 
-        this.intervalId = this.start();
+        this.cycleIntervalId = this.start();
     }
 
     logInfo(msg: string) {
@@ -121,7 +121,7 @@ export class PTM {
     }
 
     stop(reason?: string) {
-        window.clearInterval(this.intervalId);
+        window.clearInterval(this.cycleIntervalId);
         let msg = "Interpreter exited";
         if (reason) {
             msg += `\nReason: ${reason}`;
