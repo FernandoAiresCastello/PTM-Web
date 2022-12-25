@@ -1,7 +1,6 @@
 import { PTM_ParseError } from "../Errors/PTM_ParseError";
 import { Interpreter } from "../Interpreter/Interpreter";
 import { PTM } from "../PTM";
-import { Command } from "../Interpreter/Command";
 import { ExecutionTime } from "./ExecutionTime";
 import { Param } from "./Param";
 import { Program } from "./Program";
@@ -36,7 +35,7 @@ export class Parser {
                     this.program.addLine(newPrgLine);
                     actualLineIndex++;
                 } else if (newPrgLine.execTime === ExecutionTime.CompileTime) {
-                    this.ptm.executor.execute(newPrgLine);
+                    this.ptm.commands.execute(newPrgLine);
                 } else if (newPrgLine.execTime === ExecutionTime.Undefined) {
                     throw new PTM_ParseError("Could not determine execution time for this line", newPrgLine);
                 }
@@ -69,7 +68,7 @@ export class Parser {
         return line;
     }
 
-    private extractCommand(line: ProgramLine): Command {
+    private extractCommand(line: ProgramLine): string {
         let cmdName = "";
         const src = line.src.trim();
         const ixFirstSpace = src.indexOf(" ");
@@ -78,12 +77,7 @@ export class Parser {
         } else {
             cmdName = src;
         }
-        cmdName = cmdName.toUpperCase();
-        if (Interpreter.commandExists(cmdName)) {
-            return cmdName as Command;
-        } else {
-            throw new PTM_ParseError(`Command not recognized: ${cmdName}`, line);
-        }
+        return cmdName.toUpperCase();
     }
 
     private extractParams(line: ProgramLine): Param[] {
@@ -126,8 +120,8 @@ export class Parser {
         return params;
     }
 
-    private determineExecutionTime(cmd: Command): ExecutionTime {
-        if (cmd === Command.DATA) {
+    private determineExecutionTime(cmd: string): ExecutionTime {
+        if (cmd === "DATA") {
             return ExecutionTime.CompileTime;
         } else {
             return ExecutionTime.RunTime;

@@ -734,99 +734,50 @@ exports.Viewport = Viewport;
 },{}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Command = void 0;
-var Command;
-(function (Command) {
-    Command["TEST"] = "TEST";
-    Command["DBG"] = "DBG";
-    Command["DATA"] = "DATA";
-    Command["EXIT"] = "EXIT";
-    Command["RESET"] = "RESET";
-    Command["TITLE"] = "TITLE";
-    Command["SCREEN"] = "SCREEN";
-    Command["GOTO"] = "GOTO";
-    Command["CALL"] = "CALL";
-    Command["RET"] = "RET";
-    Command["VAR"] = "VAR";
-    Command["ARR_NEW"] = "ARR.NEW";
-    Command["ARR_SET"] = "ARR.SET";
-    Command["ARR_PUSH"] = "ARR.PUSH";
-    Command["INC"] = "INC";
-    Command["DEC"] = "DEC";
-    Command["PAL"] = "PAL";
-    Command["CHR"] = "CHR";
-    Command["WCOL"] = "WCOL";
-    Command["CLS"] = "CLS";
-    Command["VSYNC"] = "VSYNC";
-    Command["BUF_SEL"] = "BUF.SEL";
-    Command["BUF_VIEW"] = "BUF.VIEW";
-    Command["BUF_SCRL"] = "BUF.SCRL";
-    Command["LAYER"] = "LAYER";
-    Command["TILE_NEW"] = "TILE.NEW";
-    Command["TILE_ADD"] = "TILE.ADD";
-    Command["LOCATE"] = "LOCATE";
-    Command["PUT"] = "PUT";
-    Command["FILL"] = "FILL";
-    Command["TRON"] = "TRON";
-    Command["TROFF"] = "TROFF";
-    Command["PRINT"] = "PRINT";
-    Command["PRINT_ADD"] = "PRINT.ADD";
-    Command["FCOL"] = "FCOL";
-    Command["BCOL"] = "BCOL";
-    Command["COLOR"] = "COLOR";
-})(Command = exports.Command || (exports.Command = {}));
-
-},{}],18:[function(require,module,exports){
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.CommandExecutor = void 0;
+exports.Commands = void 0;
 const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
-const Command_1 = require("./Command");
-class CommandExecutor {
+class Commands {
     constructor(ptm, intp) {
         this.ptm = ptm;
         this.intp = intp;
-        this.commandDict = this.initCommands();
-    }
-    initCommands() {
-        return {
-            [Command_1.Command.TEST]: this.TEST,
-            [Command_1.Command.DBG]: this.DBG,
-            [Command_1.Command.DATA]: this.DATA,
-            [Command_1.Command.EXIT]: this.EXIT,
-            [Command_1.Command.RESET]: this.RESET,
-            [Command_1.Command.TITLE]: this.TITLE,
-            [Command_1.Command.SCREEN]: this.SCREEN,
-            [Command_1.Command.GOTO]: this.GOTO,
-            [Command_1.Command.CALL]: this.CALL,
-            [Command_1.Command.RET]: this.RET,
-            [Command_1.Command.VAR]: this.VAR,
-            [Command_1.Command.ARR_NEW]: this.ARR_NEW,
-            [Command_1.Command.ARR_SET]: this.ARR_SET,
-            [Command_1.Command.ARR_PUSH]: this.ARR_PUSH,
-            [Command_1.Command.INC]: this.INC,
-            [Command_1.Command.DEC]: this.DEC,
-            [Command_1.Command.CLS]: this.CLS,
-            [Command_1.Command.PAL]: this.PAL,
-            [Command_1.Command.CHR]: this.CHR,
-            [Command_1.Command.WCOL]: this.WCOL,
-            [Command_1.Command.VSYNC]: this.VSYNC,
-            [Command_1.Command.BUF_SEL]: this.BUF_SEL,
-            [Command_1.Command.BUF_VIEW]: this.BUF_VIEW,
-            [Command_1.Command.BUF_SCRL]: this.BUF_SCRL,
-            [Command_1.Command.LAYER]: this.LAYER,
-            [Command_1.Command.LOCATE]: this.LOCATE,
-            [Command_1.Command.TILE_NEW]: this.TILE_NEW,
-            [Command_1.Command.TILE_ADD]: this.TILE_ADD,
-            [Command_1.Command.PUT]: this.PUT,
-            [Command_1.Command.FILL]: this.FILL,
-            [Command_1.Command.TRON]: this.TRON,
-            [Command_1.Command.TROFF]: this.TROFF,
-            [Command_1.Command.PRINT]: this.PRINT,
-            [Command_1.Command.PRINT_ADD]: this.PRINT_ADD,
-            [Command_1.Command.FCOL]: this.FCOL,
-            [Command_1.Command.BCOL]: this.BCOL,
-            [Command_1.Command.COLOR]: this.COLOR
+        this.commandDict = {
+            ["TEST"]: this.TEST,
+            ["DEBUG"]: this.DEBUG,
+            ["DATA"]: this.DATA,
+            ["EXIT"]: this.EXIT,
+            ["RESET"]: this.RESET,
+            ["TITLE"]: this.TITLE,
+            ["SCREEN"]: this.SCREEN,
+            ["GOTO"]: this.GOTO,
+            ["CALL"]: this.CALL,
+            ["RET"]: this.RET,
+            ["VAR"]: this.VAR,
+            ["ARR.NEW"]: this.ARR_NEW,
+            ["ARR.SET"]: this.ARR_SET,
+            ["ARR.PUSH"]: this.ARR_PUSH,
+            ["INC"]: this.INC,
+            ["DEC"]: this.DEC,
+            ["CLS"]: this.CLS,
+            ["PAL"]: this.PAL,
+            ["CHR"]: this.CHR,
+            ["WCOL"]: this.WCOL,
+            ["VSYNC"]: this.VSYNC,
+            ["BUF.SEL"]: this.BUF_SEL,
+            ["BUF.VIEW"]: this.BUF_VIEW,
+            ["BUF.SCRL"]: this.BUF_SCRL,
+            ["LAYER"]: this.LAYER,
+            ["LOCATE"]: this.LOCATE,
+            ["TILE.NEW"]: this.TILE_NEW,
+            ["TILE.ADD"]: this.TILE_ADD,
+            ["PUT"]: this.PUT,
+            ["FILL"]: this.FILL,
+            ["TRON"]: this.TRON,
+            ["TROFF"]: this.TROFF,
+            ["PRINT"]: this.PRINT,
+            ["PRINT.ADD"]: this.PRINT_ADD,
+            ["FCOL"]: this.FCOL,
+            ["BCOL"]: this.BCOL,
+            ["COLOR"]: this.COLOR
         };
     }
     execute(programLine) {
@@ -835,15 +786,20 @@ class CommandExecutor {
             this.ptm.logExecution(programLine);
             this.intp.programLine = programLine;
             const commandFunction = this.commandDict[cmd];
-            commandFunction(this.ptm, this.intp);
+            if (commandFunction) {
+                commandFunction(this.ptm, this.intp);
+            }
+            else {
+                throw new PTM_RuntimeError_1.PTM_RuntimeError(`Unknown command: ${cmd}`, programLine);
+            }
         }
         else {
-            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Command reference is invalid`, programLine);
         }
     }
     TEST(ptm, intp) {
     }
-    DBG(ptm, intp) {
+    DEBUG(ptm, intp) {
         intp.argc(1);
         if (intp.isArray(0)) {
             const arrId = intp.getArg(0).text;
@@ -1095,14 +1051,13 @@ class CommandExecutor {
         ptm.currentTextBgc = bgc;
     }
 }
-exports.CommandExecutor = CommandExecutor;
+exports.Commands = Commands;
 
-},{"../Errors/PTM_RuntimeError":3,"./Command":17}],19:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Interpreter = void 0;
 const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
-const Command_1 = require("./Command");
 const ParamType_1 = require("../Parser/ParamType");
 class Interpreter {
     constructor(ptm, program) {
@@ -1111,9 +1066,6 @@ class Interpreter {
     }
     static isValidIdentifier(id) {
         return id.match(/^[$A-Z_][0-9A-Z._$]*$/i) !== null;
-    }
-    static commandExists(cmd) {
-        return Object.values(Command_1.Command).includes(cmd);
     }
     getArg(paramIx) {
         return this.programLine.params[paramIx];
@@ -1326,12 +1278,12 @@ class Interpreter {
 }
 exports.Interpreter = Interpreter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":24,"./Command":17}],20:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":23}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
 const Parser_1 = require("./Parser/Parser");
-const CommandExecutor_1 = require("./Interpreter/CommandExecutor");
+const Commands_1 = require("./Interpreter/Commands");
 const Interpreter_1 = require("./Interpreter/Interpreter");
 const PTM_RuntimeError_1 = require("./Errors/PTM_RuntimeError");
 const Palette_1 = require("./Graphics/Palette");
@@ -1354,7 +1306,7 @@ class PTM {
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter_1.Interpreter(this, this.program);
-        this.executor = new CommandExecutor_1.CommandExecutor(this, this.intp);
+        this.commands = new Commands_1.Commands(this, this.intp);
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
@@ -1406,7 +1358,7 @@ class PTM {
         else {
             this.currentLine = this.program.lines[this.programPtr];
             try {
-                this.executor.execute(this.currentLine);
+                this.commands.execute(this.currentLine);
                 if (!this.branching) {
                     this.programPtr++;
                 }
@@ -1473,7 +1425,7 @@ class PTM {
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultTileset":6,"./Graphics/Display":7,"./Graphics/Palette":9,"./Graphics/TileSeq":14,"./Graphics/Tileset":15,"./Interpreter/CommandExecutor":18,"./Interpreter/Interpreter":19,"./Parser/Parser":25,"./main":29}],21:[function(require,module,exports){
+},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultTileset":6,"./Graphics/Display":7,"./Graphics/Palette":9,"./Graphics/TileSeq":14,"./Graphics/Tileset":15,"./Interpreter/Commands":17,"./Interpreter/Interpreter":18,"./Parser/Parser":24,"./main":28}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -1484,7 +1436,7 @@ var ExecutionTime;
     ExecutionTime["RunTime"] = "RunTime";
 })(ExecutionTime = exports.ExecutionTime || (exports.ExecutionTime = {}));
 
-},{}],22:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NumberBase = void 0;
@@ -1496,7 +1448,7 @@ var NumberBase;
     NumberBase["Binary"] = "Binary";
 })(NumberBase = exports.NumberBase || (exports.NumberBase = {}));
 
-},{}],23:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
@@ -1635,7 +1587,7 @@ Param.BinPrefix = "&B";
 Param.ArrayLeftBrace = "[";
 Param.ArrayRightBrace = "]";
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":19,"./NumberBase":22,"./ParamType":24}],24:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":18,"./NumberBase":21,"./ParamType":23}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
@@ -1649,13 +1601,11 @@ var ParamType;
     ParamType["ArrayIxVarIdentifier"] = "ArrayIxVarIdentifier";
 })(ParamType = exports.ParamType || (exports.ParamType = {}));
 
-},{}],25:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
 const PTM_ParseError_1 = require("../Errors/PTM_ParseError");
-const Interpreter_1 = require("../Interpreter/Interpreter");
-const Command_1 = require("../Interpreter/Command");
 const ExecutionTime_1 = require("./ExecutionTime");
 const Param_1 = require("./Param");
 const Program_1 = require("./Program");
@@ -1683,7 +1633,7 @@ class Parser {
                     actualLineIndex++;
                 }
                 else if (newPrgLine.execTime === ExecutionTime_1.ExecutionTime.CompileTime) {
-                    this.ptm.executor.execute(newPrgLine);
+                    this.ptm.commands.execute(newPrgLine);
                 }
                 else if (newPrgLine.execTime === ExecutionTime_1.ExecutionTime.Undefined) {
                     throw new PTM_ParseError_1.PTM_ParseError("Could not determine execution time for this line", newPrgLine);
@@ -1730,13 +1680,7 @@ class Parser {
         else {
             cmdName = src;
         }
-        cmdName = cmdName.toUpperCase();
-        if (Interpreter_1.Interpreter.commandExists(cmdName)) {
-            return cmdName;
-        }
-        else {
-            throw new PTM_ParseError_1.PTM_ParseError(`Command not recognized: ${cmdName}`, line);
-        }
+        return cmdName.toUpperCase();
     }
     extractParams(line) {
         const src = line.src.trim();
@@ -1780,7 +1724,7 @@ class Parser {
         return params;
     }
     determineExecutionTime(cmd) {
-        if (cmd === Command_1.Command.DATA) {
+        if (cmd === "DATA") {
             return ExecutionTime_1.ExecutionTime.CompileTime;
         }
         else {
@@ -1796,7 +1740,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Command":17,"../Interpreter/Interpreter":19,"./ExecutionTime":21,"./Param":23,"./Program":26,"./ProgramLine":27,"./ProgramLineType":28}],26:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"./ExecutionTime":20,"./Param":22,"./Program":25,"./ProgramLine":26,"./ProgramLineType":27}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;
@@ -1817,7 +1761,7 @@ class Program {
 }
 exports.Program = Program;
 
-},{}],27:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLine = void 0;
@@ -1838,7 +1782,7 @@ class ProgramLine {
 }
 exports.ProgramLine = ProgramLine;
 
-},{"./ExecutionTime":21,"./ProgramLineType":28}],28:[function(require,module,exports){
+},{"./ExecutionTime":20,"./ProgramLineType":27}],27:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLineType = void 0;
@@ -1850,7 +1794,7 @@ var ProgramLineType;
     ProgramLineType["Label"] = "Label";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}],29:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM_Main = void 0;
@@ -1876,4 +1820,4 @@ function PTM_Main() {
 }
 exports.PTM_Main = PTM_Main;
 
-},{"./Errors/PTM_InitializationError":1,"./PTM":20}]},{},[20]);
+},{"./Errors/PTM_InitializationError":1,"./PTM":19}]},{},[19]);

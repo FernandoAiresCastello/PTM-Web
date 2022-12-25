@@ -1,5 +1,4 @@
 import { ProgramLineType } from "./ProgramLineType";
-import { Command } from "../Interpreter/Command";
 import { Param } from "./Param";
 import { ExecutionTime } from "./ExecutionTime";
 
@@ -9,7 +8,7 @@ export class ProgramLine {
     lineNr: number;
     type: ProgramLineType;
     execTime: ExecutionTime;
-    cmd: Command | null;
+    cmd: string | null;
     params: Param[];
 
     constructor(src: string, lineNr: number) {

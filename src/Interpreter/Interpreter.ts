@@ -1,7 +1,6 @@
 import { PTM_RuntimeError } from "../Errors/PTM_RuntimeError";
 import { ColorString } from "../Graphics/ColorTypes";
 import { PTM } from "../PTM";
-import { Command } from "./Command";
 import { Param } from "../Parser/Param";
 import { ParamType } from "../Parser/ParamType";
 import { Program } from "../Parser/Program";
@@ -20,10 +19,6 @@ export class Interpreter {
 
     static isValidIdentifier(id: string): boolean {
         return id.match(/^[$A-Z_][0-9A-Z._$]*$/i) !== null;
-    }
-
-    static commandExists(cmd: string): boolean {
-        return Object.values(Command).includes(cmd as Command);
     }
 
     getArg(paramIx: number): Param {

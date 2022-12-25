@@ -9,13 +9,15 @@
 
     CALL init_gfx
     SCREEN 256,192,3,3,2
-
+    
+    WCOL 1    
+    VAR hello,"Hello World!"
     LOCATE 0,0
     COLOR 2,3
-    PRINT "Hello World!"
+    PRINT hello
     COLOR 4,5
     LOCATE 0,0
-    PRINT.ADD "Hello World!"
+    PRINT.ADD hello
     VSYNC
 
     EXIT

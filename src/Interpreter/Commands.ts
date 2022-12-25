@@ -1,61 +1,58 @@
 import { PTM } from "../PTM";
 import { PTM_RuntimeError } from "../Errors/PTM_RuntimeError";
 import { Interpreter } from "./Interpreter";
-import { CommandDictionary } from "./CommandDictionary";
 import { ProgramLine } from "../Parser/ProgramLine";
-import { Command } from "./Command";
 
-export class CommandExecutor {
+type Command = { [cmd: string] : (ptm: PTM, intp: Interpreter) => void; }
+
+export class Commands {
 
     private readonly ptm: PTM;
     private readonly intp: Interpreter;
-    private readonly commandDict: CommandDictionary;
-
+    private readonly commandDict: Command;
+   
     constructor(ptm: PTM, intp: Interpreter) {
         this.ptm = ptm;
         this.intp = intp;
-        this.commandDict = this.initCommands();
-    }
+        this.commandDict = {
 
-    private initCommands() {
-        return {
-            [Command.TEST]: this.TEST,
-            [Command.DBG]: this.DBG,
-            [Command.DATA]: this.DATA,
-            [Command.EXIT]: this.EXIT,
-            [Command.RESET]: this.RESET,
-            [Command.TITLE]: this.TITLE,
-            [Command.SCREEN]: this.SCREEN,
-            [Command.GOTO]: this.GOTO,
-            [Command.CALL]: this.CALL,
-            [Command.RET]: this.RET,
-            [Command.VAR]: this.VAR,
-            [Command.ARR_NEW]: this.ARR_NEW,
-            [Command.ARR_SET]: this.ARR_SET,
-            [Command.ARR_PUSH]: this.ARR_PUSH,
-            [Command.INC]: this.INC,
-            [Command.DEC]: this.DEC,
-            [Command.CLS]: this.CLS,
-            [Command.PAL]: this.PAL,
-            [Command.CHR]: this.CHR,
-            [Command.WCOL]: this.WCOL,
-            [Command.VSYNC]: this.VSYNC,
-            [Command.BUF_SEL]: this.BUF_SEL,
-            [Command.BUF_VIEW]: this.BUF_VIEW,
-            [Command.BUF_SCRL]: this.BUF_SCRL,
-            [Command.LAYER]: this.LAYER,
-            [Command.LOCATE]: this.LOCATE,
-            [Command.TILE_NEW]: this.TILE_NEW,
-            [Command.TILE_ADD]: this.TILE_ADD,
-            [Command.PUT]: this.PUT,
-            [Command.FILL]: this.FILL,
-            [Command.TRON]: this.TRON,
-            [Command.TROFF]: this.TROFF,
-            [Command.PRINT]: this.PRINT,
-            [Command.PRINT_ADD]: this.PRINT_ADD,
-            [Command.FCOL]: this.FCOL,
-            [Command.BCOL]: this.BCOL,
-            [Command.COLOR]: this.COLOR
+            ["TEST"]: this.TEST,
+            ["DEBUG"]: this.DEBUG,
+            ["DATA"]: this.DATA,
+            ["EXIT"]: this.EXIT,
+            ["RESET"]: this.RESET,
+            ["TITLE"]: this.TITLE,
+            ["SCREEN"]: this.SCREEN,
+            ["GOTO"]: this.GOTO,
+            ["CALL"]: this.CALL,
+            ["RET"]: this.RET,
+            ["VAR"]: this.VAR,
+            ["ARR.NEW"]: this.ARR_NEW,
+            ["ARR.SET"]: this.ARR_SET,
+            ["ARR.PUSH"]: this.ARR_PUSH,
+            ["INC"]: this.INC,
+            ["DEC"]: this.DEC,
+            ["CLS"]: this.CLS,
+            ["PAL"]: this.PAL,
+            ["CHR"]: this.CHR,
+            ["WCOL"]: this.WCOL,
+            ["VSYNC"]: this.VSYNC,
+            ["BUF.SEL"]: this.BUF_SEL,
+            ["BUF.VIEW"]: this.BUF_VIEW,
+            ["BUF.SCRL"]: this.BUF_SCRL,
+            ["LAYER"]: this.LAYER,
+            ["LOCATE"]: this.LOCATE,
+            ["TILE.NEW"]: this.TILE_NEW,
+            ["TILE.ADD"]: this.TILE_ADD,
+            ["PUT"]: this.PUT,
+            ["FILL"]: this.FILL,
+            ["TRON"]: this.TRON,
+            ["TROFF"]: this.TROFF,
+            ["PRINT"]: this.PRINT,
+            ["PRINT.ADD"]: this.PRINT_ADD,
+            ["FCOL"]: this.FCOL,
+            ["BCOL"]: this.BCOL,
+            ["COLOR"]: this.COLOR
         };
     }
 
@@ -65,16 +62,20 @@ export class CommandExecutor {
             this.ptm.logExecution(programLine);
             this.intp.programLine = programLine;
             const commandFunction = this.commandDict[cmd];
-            commandFunction(this.ptm, this.intp);
+            if (commandFunction) {
+                commandFunction(this.ptm, this.intp);
+            } else {
+                throw new PTM_RuntimeError(`Unknown command: ${cmd}`, programLine);
+            }
         } else {
-            throw new PTM_RuntimeError(`Command reference is invalid (${cmd})`, programLine);
+            throw new PTM_RuntimeError(`Command reference is invalid`, programLine);
         }
     }
 
     TEST(ptm: PTM, intp: Interpreter) { // Used only for internal testing
     }
 
-    DBG(ptm: PTM, intp: Interpreter) {
+    DEBUG(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         if (intp.isArray(0)) {
             const arrId = intp.getArg(0).text;

@@ -1,6 +1,6 @@
 import { Parser } from "./Parser/Parser";
 import { Program } from "./Parser/Program";
-import { CommandExecutor } from "./Interpreter/CommandExecutor";
+import { Commands } from "./Interpreter/Commands";
 import { Interpreter } from "./Interpreter/Interpreter";
 import { ProgramLine } from "./Parser/ProgramLine";
 import { PTM_RuntimeError } from "./Errors/PTM_RuntimeError";
@@ -33,7 +33,7 @@ export class PTM {
     private readonly trace: boolean = false;
     private readonly cycleInterval: number = 1;
     private readonly animationInterval: number = 400;
-    readonly executor: CommandExecutor;
+    readonly commands: Commands;
     readonly intp: Interpreter;
     private readonly parser: Parser;
     private readonly program: Program;
@@ -51,7 +51,7 @@ export class PTM {
         this.parser = new Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter(this, this.program);
-        this.executor = new CommandExecutor(this, this.intp);
+        this.commands = new Commands(this, this.intp);
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
@@ -107,7 +107,7 @@ export class PTM {
         } else {
             this.currentLine = this.program.lines[this.programPtr];
             try {
-                this.executor.execute(this.currentLine);
+                this.commands.execute(this.currentLine);
                 if (!this.branching) {
                     this.programPtr++;
                 } else {
