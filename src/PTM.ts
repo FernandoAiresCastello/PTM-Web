@@ -13,7 +13,7 @@ import { Cursor } from "./Graphics/Cursor";
 import { TileSeq } from "./Graphics/TileSeq";
 import { DefaultTileset } from "./Graphics/DefaultTileset";
 import { PTM_Main } from "./main";
-import { LoopStack } from "./Interpreter/Loop";
+import { Loop, LoopStack } from "./Interpreter/Loop";
 
 document.addEventListener("DOMContentLoaded", PTM_Main);
 
@@ -193,5 +193,68 @@ export class PTM {
         if (this.cursor && this.display) {
             this.cursor.buffer.setTileString(str, this.cursor, this.currentTextFgc, this.currentTextBgc, this.currentTile.transparent);
         }
+    }
+
+    loopStart(varId: string, first: number, last: number, step: number) {
+        if (step === 0) {
+            throw new PTM_RuntimeError("Invalid loop increment: 0", this.currentLine!);
+        }
+        this.vars[varId] = first.toString();
+        const loop = new Loop();
+        loop.isArray = false;
+        loop.lineIxBegin = this.programPtr + 1;
+        loop.varId = varId;
+        loop.current = first;
+        loop.first = first;
+        loop.last = last;
+        loop.step = step;
+        this.loopStack.push(loop);
+    }
+
+    loopEnd() {
+        if (this.loopStack.isEmpty()) {
+            return;
+        }
+        const loop = this.loopStack.top();
+        if (!loop) {
+            throw new PTM_RuntimeError("Loop stack is empty", this.currentLine!);
+        }
+    
+        if (loop.isArray) {
+            if (loop.current >= loop.last) { // Array loop ended
+                this.loopStack.pop();
+                return;
+            }
+            // Next array element
+            loop.current++;
+            const arr = this.arrays[loop.arrayId];
+            this.vars[loop.iterationVariable] = arr[loop.current];
+   
+        } else {
+            const nextValue = loop.current + loop.step;
+            if (loop.step > 0) {
+                if (nextValue > loop.last) { // Loop ended
+                    this.loopStack.pop();
+                    return;
+                }
+            } else if (loop.step < 0) {
+                if (nextValue < loop.last) { // Loop ended
+                    this.loopStack.pop();
+                    return;
+                }
+            }
+            // Next iteration
+            loop.current = nextValue;
+            this.vars[loop.varId] = nextValue.toString();
+        }
+    
+        this.programPtr = loop.lineIxBegin;
+        this.branching = true;
+    }
+
+    arrayLoopStart() {
+    }
+
+    loopBreak() {
     }
 }

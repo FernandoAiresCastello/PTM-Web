@@ -2,7 +2,7 @@ export class Loop {
 
     lineIxBegin: number = 0;
 
-    variable: string = "";
+    varId: string = "";
     current: number = 0;
     first: number = 0;
     last: number = 0;
@@ -27,5 +27,17 @@ export class LoopStack {
 
     pop(): Loop | undefined {
         return this.loops.pop();
+    }
+
+    top(): Loop | undefined {
+        if (this.loops.length > 0) {
+            return this.loops[this.loops.length - 1];
+        } else {
+            return undefined;
+        }
+    }
+
+    isEmpty(): boolean {
+        return this.loops.length === 0;
     }
 }

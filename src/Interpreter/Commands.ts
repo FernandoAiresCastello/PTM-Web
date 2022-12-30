@@ -53,7 +53,9 @@ export class Commands {
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
             ["COLOR"]: this.COLOR,
-            ["PAUSE"]: this.PAUSE
+            ["PAUSE"]: this.PAUSE,
+            ["FOR"]: this.FOR,
+            ["NEXT"]: this.NEXT,
         };
     }
 
@@ -376,5 +378,19 @@ export class Commands {
         intp.argc(1);
         const length = intp.requireNumber(0);
         ptm.pause(length);
+    }
+
+    FOR(ptm: PTM, intp: Interpreter) {
+        const argc = intp.argcMinMax(3, 4);
+        const varId = intp.requireId(0);
+        const first = intp.requireNumber(1);
+        const last = intp.requireNumber(2);
+        const step = argc === 4 ? intp.requireNumber(3) : 1;
+        ptm.loopStart(varId, first, last, step);
+    }
+
+    NEXT(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
+        ptm.loopEnd();
     }
 }

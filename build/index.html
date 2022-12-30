@@ -13,15 +13,25 @@
     WCOL 1
 	COLOR 0
 	TRON
-    VAR msg,"Hello World!"
-	VAR pause,100
-	LOCATE 1,1
-
-loop:
-	PRINTL msg
+    
+	VAR msg,"Hello World!"
+	VAR x,1
+	VAR y,1
+	
+	FOR i,1,5
+		LOCATE x,y
+		PRINT i
+		INC y
+		FOR k,3,5
+			LOCATE x,y
+			PRINT "   "
+			PRINT k
+			INC y
+		NEXT
+	NEXT
 	VSYNC
-	PAUSE pause
-	GOTO loop
+
+	EXIT
 
 init_gfx:
 

@@ -787,7 +787,9 @@ class Commands {
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
             ["COLOR"]: this.COLOR,
-            ["PAUSE"]: this.PAUSE
+            ["PAUSE"]: this.PAUSE,
+            ["FOR"]: this.FOR,
+            ["NEXT"]: this.NEXT,
         };
     }
     execute(programLine) {
@@ -1072,6 +1074,18 @@ class Commands {
         const length = intp.requireNumber(0);
         ptm.pause(length);
     }
+    FOR(ptm, intp) {
+        const argc = intp.argcMinMax(3, 4);
+        const varId = intp.requireId(0);
+        const first = intp.requireNumber(1);
+        const last = intp.requireNumber(2);
+        const step = argc === 4 ? intp.requireNumber(3) : 1;
+        ptm.loopStart(varId, first, last, step);
+    }
+    NEXT(ptm, intp) {
+        intp.argc(0);
+        ptm.loopEnd();
+    }
 }
 exports.Commands = Commands;
 
@@ -1307,7 +1321,7 @@ exports.LoopStack = exports.Loop = void 0;
 class Loop {
     constructor() {
         this.lineIxBegin = 0;
-        this.variable = "";
+        this.varId = "";
         this.current = 0;
         this.first = 0;
         this.last = 0;
@@ -1327,6 +1341,17 @@ class LoopStack {
     }
     pop() {
         return this.loops.pop();
+    }
+    top() {
+        if (this.loops.length > 0) {
+            return this.loops[this.loops.length - 1];
+        }
+        else {
+            return undefined;
+        }
+    }
+    isEmpty() {
+        return this.loops.length === 0;
     }
 }
 exports.LoopStack = LoopStack;
@@ -1491,6 +1516,64 @@ class PTM {
         if (this.cursor && this.display) {
             this.cursor.buffer.setTileString(str, this.cursor, this.currentTextFgc, this.currentTextBgc, this.currentTile.transparent);
         }
+    }
+    loopStart(varId, first, last, step) {
+        if (step === 0) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError("Invalid loop increment: 0", this.currentLine);
+        }
+        this.vars[varId] = first.toString();
+        const loop = new Loop_1.Loop();
+        loop.isArray = false;
+        loop.lineIxBegin = this.programPtr + 1;
+        loop.varId = varId;
+        loop.current = first;
+        loop.first = first;
+        loop.last = last;
+        loop.step = step;
+        this.loopStack.push(loop);
+    }
+    loopEnd() {
+        if (this.loopStack.isEmpty()) {
+            return;
+        }
+        const loop = this.loopStack.top();
+        if (!loop) {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError("Loop stack is empty", this.currentLine);
+        }
+        if (loop.isArray) {
+            if (loop.current >= loop.last) { // Array loop ended
+                this.loopStack.pop();
+                return;
+            }
+            // Next array element
+            loop.current++;
+            const arr = this.arrays[loop.arrayId];
+            this.vars[loop.iterationVariable] = arr[loop.current];
+        }
+        else {
+            const nextValue = loop.current + loop.step;
+            if (loop.step > 0) {
+                if (nextValue > loop.last) { // Loop ended
+                    this.loopStack.pop();
+                    return;
+                }
+            }
+            else if (loop.step < 0) {
+                if (nextValue < loop.last) { // Loop ended
+                    this.loopStack.pop();
+                    return;
+                }
+            }
+            // Next iteration
+            loop.current = nextValue;
+            this.vars[loop.varId] = nextValue.toString();
+        }
+        this.programPtr = loop.lineIxBegin;
+        this.branching = true;
+    }
+    arrayLoopStart() {
+    }
+    loopBreak() {
     }
 }
 exports.PTM = PTM;
