@@ -570,13 +570,21 @@ class TileBuffer {
     setTile(tile, layer, x, y) {
         this.layers[layer].setTile(tile, x, y);
     }
-    setTileString(str, layer, x, y, fgc, bgc, transp) {
+    setTileString(str, cursor, fgc, bgc, transp) {
+        const px = cursor.x;
         for (let i = 0; i < str.length; i++) {
             const tile = new TileSeq_1.TileSeq();
             const ch = str.charCodeAt(i);
-            tile.transparent = transp;
-            tile.setSingle(ch, fgc, bgc);
-            this.setTile(tile, layer, x + i, y);
+            if (str.charAt(i) === "\n") {
+                cursor.y++;
+                cursor.x = px;
+            }
+            else {
+                tile.transparent = transp;
+                tile.setSingle(ch, fgc, bgc);
+                this.setTile(tile, cursor.layer, cursor.x, cursor.y);
+                cursor.x++;
+            }
         }
     }
     overlapTileString(str, layer, x, y, fgc, bgc, transp) {
@@ -774,10 +782,12 @@ class Commands {
             ["TRON"]: this.TRON,
             ["TROFF"]: this.TROFF,
             ["PRINT"]: this.PRINT,
+            ["PRINTL"]: this.PRINTL,
             ["PRINT.ADD"]: this.PRINT_ADD,
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
-            ["COLOR"]: this.COLOR
+            ["COLOR"]: this.COLOR,
+            ["PAUSE"]: this.PAUSE
         };
     }
     execute(programLine) {
@@ -817,6 +827,9 @@ class Commands {
     EXIT(ptm, intp) {
         intp.argc(0);
         ptm.stop("Exit requested");
+        if (ptm.display) {
+            ptm.display.update();
+        }
     }
     RESET(ptm, intp) {
         intp.argc(0);
@@ -830,9 +843,9 @@ class Commands {
         intp.argc(5);
         const width = intp.requireNumber(0);
         const height = intp.requireNumber(1);
-        const hStretch = intp.requireNumber(2);
-        const vStretch = intp.requireNumber(3);
-        const defaultBufLayers = intp.requireNumber(4);
+        const defaultBufLayers = intp.requireNumber(2);
+        const hStretch = intp.requireNumber(3);
+        const vStretch = intp.requireNumber(4);
         ptm.createDisplay(width, height, hStretch, vStretch, defaultBufLayers);
     }
     GOTO(ptm, intp) {
@@ -1020,10 +1033,12 @@ class Commands {
     PRINT(ptm, intp) {
         intp.argc(1);
         const text = intp.requireString(0);
-        if (ptm.cursor && ptm.display) {
-            ptm.cursor.buffer.setTileString(text, ptm.cursor.layer, ptm.cursor.x, ptm.cursor.y, ptm.currentTextFgc, ptm.currentTextBgc, ptm.currentTile.transparent);
-            ptm.cursor.x += text.length;
-        }
+        ptm.printTileStringAtCursorPos(text);
+    }
+    PRINTL(ptm, intp) {
+        intp.argc(1);
+        const text = intp.requireString(0);
+        ptm.printTileStringAtCursorPos(text + "\n");
     }
     PRINT_ADD(ptm, intp) {
         intp.argc(1);
@@ -1044,11 +1059,18 @@ class Commands {
         ptm.currentTextBgc = color;
     }
     COLOR(ptm, intp) {
-        intp.argc(2);
+        const argc = intp.argcMinMax(1, 2);
         const fgc = intp.requireNumber(0);
-        const bgc = intp.requireNumber(1);
         ptm.currentTextFgc = fgc;
-        ptm.currentTextBgc = bgc;
+        if (argc === 2) {
+            const bgc = intp.requireNumber(1);
+            ptm.currentTextBgc = bgc;
+        }
+    }
+    PAUSE(ptm, intp) {
+        intp.argc(1);
+        const length = intp.requireNumber(0);
+        ptm.pause(length);
     }
 }
 exports.Commands = Commands;
@@ -1278,7 +1300,38 @@ class Interpreter {
 }
 exports.Interpreter = Interpreter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":23}],19:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":24}],19:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.LoopStack = exports.Loop = void 0;
+class Loop {
+    constructor() {
+        this.lineIxBegin = 0;
+        this.variable = "";
+        this.current = 0;
+        this.first = 0;
+        this.last = 0;
+        this.step = 0;
+        this.isArray = false;
+        this.arrayId = "";
+        this.iterationVariable = "";
+    }
+}
+exports.Loop = Loop;
+class LoopStack {
+    constructor() {
+        this.loops = [];
+    }
+    push(loop) {
+        this.loops.push(loop);
+    }
+    pop() {
+        return this.loops.pop();
+    }
+}
+exports.LoopStack = LoopStack;
+
+},{}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
@@ -1293,6 +1346,7 @@ const Cursor_1 = require("./Graphics/Cursor");
 const TileSeq_1 = require("./Graphics/TileSeq");
 const DefaultTileset_1 = require("./Graphics/DefaultTileset");
 const main_1 = require("./main");
+const Loop_1 = require("./Interpreter/Loop");
 document.addEventListener("DOMContentLoaded", main_1.PTM_Main);
 class PTM {
     constructor(displayElement, srcPtml) {
@@ -1310,7 +1364,9 @@ class PTM {
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
+        this.pauseCycles = 0;
         this.callStack = [];
+        this.loopStack = new Loop_1.LoopStack();
         this.vars = {};
         this.arrays = {};
         this.palette = new Palette_1.Palette();
@@ -1352,23 +1408,28 @@ class PTM {
         return window.setInterval(() => this.cycle(), this.cycleInterval);
     }
     cycle() {
-        if (this.programPtr >= this.program.length()) {
-            this.stop("Execution pointer past end of script");
+        if (this.pauseCycles > 0) {
+            this.pauseCycles--;
         }
         else {
-            this.currentLine = this.program.lines[this.programPtr];
-            try {
-                this.commands.execute(this.currentLine);
-                if (!this.branching) {
-                    this.programPtr++;
-                }
-                else {
-                    this.branching = false;
-                }
+            if (this.programPtr >= this.program.length()) {
+                this.stop("Execution pointer past end of script");
             }
-            catch (e) {
-                this.stop("Runtime error");
-                throw e;
+            else {
+                this.currentLine = this.program.lines[this.programPtr];
+                try {
+                    this.commands.execute(this.currentLine);
+                    if (!this.branching) {
+                        this.programPtr++;
+                    }
+                    else {
+                        this.branching = false;
+                    }
+                }
+                catch (e) {
+                    this.stop("Runtime error");
+                    throw e;
+                }
             }
         }
     }
@@ -1387,10 +1448,23 @@ class PTM {
         this.branching = true;
         (_a = this.display) === null || _a === void 0 ? void 0 : _a.reset();
         this.callStack = [];
+        this.loopStack = new Loop_1.LoopStack();
         this.vars = {};
         this.arrays = {};
         this.palette = new Palette_1.Palette();
         this.tileset = new Tileset_1.Tileset();
+    }
+    createDisplay(width, height, hStretch, vStretch, defaultBufLayers) {
+        if (this.display) {
+            this.display.reset();
+            if (this.cursor) {
+                this.cursor.set(this.display.getDefaultBuffer(), 0, 0, 0);
+            }
+        }
+        else {
+            this.display = new Display_1.Display(this.displayElement, width, height, hStretch, vStretch, defaultBufLayers, this.palette, this.tileset, this.animationInterval);
+            this.cursor = new Cursor_1.Cursor(this.display.getDefaultBuffer());
+        }
     }
     gotoSubroutine(ixProgramLine) {
         this.programPtr = ixProgramLine;
@@ -1410,22 +1484,18 @@ class PTM {
             throw new PTM_RuntimeError_1.PTM_RuntimeError("Call stack is empty", this.currentLine);
         }
     }
-    createDisplay(width, height, hStretch, vStretch, defaultBufLayers) {
-        if (this.display) {
-            this.display.reset();
-            if (this.cursor) {
-                this.cursor.set(this.display.getDefaultBuffer(), 0, 0, 0);
-            }
-        }
-        else {
-            this.display = new Display_1.Display(this.displayElement, width, height, hStretch, vStretch, defaultBufLayers, this.palette, this.tileset, this.animationInterval);
-            this.cursor = new Cursor_1.Cursor(this.display.getDefaultBuffer());
+    pause(cycles) {
+        this.pauseCycles = cycles;
+    }
+    printTileStringAtCursorPos(str) {
+        if (this.cursor && this.display) {
+            this.cursor.buffer.setTileString(str, this.cursor, this.currentTextFgc, this.currentTextBgc, this.currentTile.transparent);
         }
     }
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultTileset":6,"./Graphics/Display":7,"./Graphics/Palette":9,"./Graphics/TileSeq":14,"./Graphics/Tileset":15,"./Interpreter/Commands":17,"./Interpreter/Interpreter":18,"./Parser/Parser":24,"./main":28}],20:[function(require,module,exports){
+},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultTileset":6,"./Graphics/Display":7,"./Graphics/Palette":9,"./Graphics/TileSeq":14,"./Graphics/Tileset":15,"./Interpreter/Commands":17,"./Interpreter/Interpreter":18,"./Interpreter/Loop":19,"./Parser/Parser":25,"./main":29}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -1436,7 +1506,7 @@ var ExecutionTime;
     ExecutionTime["RunTime"] = "RunTime";
 })(ExecutionTime = exports.ExecutionTime || (exports.ExecutionTime = {}));
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NumberBase = void 0;
@@ -1448,7 +1518,7 @@ var NumberBase;
     NumberBase["Binary"] = "Binary";
 })(NumberBase = exports.NumberBase || (exports.NumberBase = {}));
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
@@ -1587,7 +1657,7 @@ Param.BinPrefix = "&B";
 Param.ArrayLeftBrace = "[";
 Param.ArrayRightBrace = "]";
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":18,"./NumberBase":21,"./ParamType":23}],23:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":18,"./NumberBase":22,"./ParamType":24}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
@@ -1601,7 +1671,7 @@ var ParamType;
     ParamType["ArrayIxVarIdentifier"] = "ArrayIxVarIdentifier";
 })(ParamType = exports.ParamType || (exports.ParamType = {}));
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
@@ -1740,7 +1810,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"./ExecutionTime":20,"./Param":22,"./Program":25,"./ProgramLine":26,"./ProgramLineType":27}],25:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"./ExecutionTime":21,"./Param":23,"./Program":26,"./ProgramLine":27,"./ProgramLineType":28}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;
@@ -1761,7 +1831,7 @@ class Program {
 }
 exports.Program = Program;
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLine = void 0;
@@ -1782,7 +1852,7 @@ class ProgramLine {
 }
 exports.ProgramLine = ProgramLine;
 
-},{"./ExecutionTime":20,"./ProgramLineType":27}],27:[function(require,module,exports){
+},{"./ExecutionTime":21,"./ProgramLineType":28}],28:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLineType = void 0;
@@ -1794,7 +1864,7 @@ var ProgramLineType;
     ProgramLineType["Label"] = "Label";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM_Main = void 0;
@@ -1843,4 +1913,4 @@ function PTM_Main() {
 }
 exports.PTM_Main = PTM_Main;
 
-},{"./Errors/PTM_InitializationError":1,"./PTM":19}]},{},[19]);
+},{"./Errors/PTM_InitializationError":1,"./PTM":20}]},{},[20]);

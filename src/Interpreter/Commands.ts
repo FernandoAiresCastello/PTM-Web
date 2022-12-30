@@ -48,10 +48,12 @@ export class Commands {
             ["TRON"]: this.TRON,
             ["TROFF"]: this.TROFF,
             ["PRINT"]: this.PRINT,
+            ["PRINTL"]: this.PRINTL,
             ["PRINT.ADD"]: this.PRINT_ADD,
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
-            ["COLOR"]: this.COLOR
+            ["COLOR"]: this.COLOR,
+            ["PAUSE"]: this.PAUSE
         };
     }
 
@@ -93,6 +95,9 @@ export class Commands {
     EXIT(ptm: PTM, intp: Interpreter) {
         intp.argc(0);
         ptm.stop("Exit requested");
+        if (ptm.display) {
+            ptm.display.update();
+        }
     }
 
     RESET(ptm: PTM, intp: Interpreter) {
@@ -109,9 +114,9 @@ export class Commands {
         intp.argc(5);
         const width = intp.requireNumber(0);
         const height = intp.requireNumber(1);
-        const hStretch = intp.requireNumber(2);
-        const vStretch = intp.requireNumber(3);
-        const defaultBufLayers = intp.requireNumber(4);
+        const defaultBufLayers = intp.requireNumber(2);
+        const hStretch = intp.requireNumber(3);
+        const vStretch = intp.requireNumber(4);
         ptm.createDisplay(width, height, hStretch, vStretch, defaultBufLayers);
     }
 
@@ -325,12 +330,13 @@ export class Commands {
     PRINT(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         const text = intp.requireString(0);
-        if (ptm.cursor && ptm.display) {
-            ptm.cursor.buffer.setTileString(
-                text, ptm.cursor.layer, ptm.cursor.x, ptm.cursor.y, 
-                ptm.currentTextFgc, ptm.currentTextBgc, ptm.currentTile.transparent);
-            ptm.cursor.x += text.length;
-        }
+        ptm.printTileStringAtCursorPos(text);
+    }
+
+    PRINTL(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const text = intp.requireString(0);
+        ptm.printTileStringAtCursorPos(text + "\n");
     }
 
     PRINT_ADD(ptm: PTM, intp: Interpreter) {
@@ -357,10 +363,18 @@ export class Commands {
     }
 
     COLOR(ptm: PTM, intp: Interpreter) {
-        intp.argc(2);
+        const argc = intp.argcMinMax(1, 2);
         const fgc = intp.requireNumber(0);
-        const bgc = intp.requireNumber(1);
         ptm.currentTextFgc = fgc;
-        ptm.currentTextBgc = bgc;
+        if (argc === 2) {
+            const bgc = intp.requireNumber(1);
+            ptm.currentTextBgc = bgc;
+        }
+    }
+
+    PAUSE(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const length = intp.requireNumber(0);
+        ptm.pause(length);
     }
 }

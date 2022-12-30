@@ -13,6 +13,7 @@ import { Cursor } from "./Graphics/Cursor";
 import { TileSeq } from "./Graphics/TileSeq";
 import { DefaultTileset } from "./Graphics/DefaultTileset";
 import { PTM_Main } from "./main";
+import { LoopStack } from "./Interpreter/Loop";
 
 document.addEventListener("DOMContentLoaded", PTM_Main);
 
@@ -33,6 +34,7 @@ export class PTM {
     private readonly trace: boolean = false;
     private readonly cycleInterval: number = 1;
     private readonly animationInterval: number = 400;
+    readonly displayElement: HTMLElement;
     readonly commands: Commands;
     readonly intp: Interpreter;
     private readonly parser: Parser;
@@ -41,8 +43,9 @@ export class PTM {
     private programPtr: number;
     private branching: boolean;
     private currentLine: ProgramLine | null;
+    private pauseCycles: number;
     private callStack: number[];
-    readonly displayElement: HTMLElement;
+    private loopStack: LoopStack;
 
     constructor(displayElement: HTMLElement, srcPtml: string) {
 
@@ -55,7 +58,9 @@ export class PTM {
         this.programPtr = 0;
         this.branching = false;
         this.currentLine = null;
+        this.pauseCycles = 0;
         this.callStack = [];
+        this.loopStack = new LoopStack();
         this.vars = {};
         this.arrays = {};
         this.palette = new Palette();
@@ -102,20 +107,24 @@ export class PTM {
     }
 
     cycle() {
-        if (this.programPtr >= this.program.length()) {
-            this.stop("Execution pointer past end of script");
+        if (this.pauseCycles > 0) {
+            this.pauseCycles--;
         } else {
-            this.currentLine = this.program.lines[this.programPtr];
-            try {
-                this.commands.execute(this.currentLine);
-                if (!this.branching) {
-                    this.programPtr++;
-                } else {
-                    this.branching = false;
+            if (this.programPtr >= this.program.length()) {
+                this.stop("Execution pointer past end of script");
+            } else {
+                this.currentLine = this.program.lines[this.programPtr];
+                try {
+                    this.commands.execute(this.currentLine);
+                    if (!this.branching) {
+                        this.programPtr++;
+                    } else {
+                        this.branching = false;
+                    }
+                } catch (e) {
+                    this.stop("Runtime error");
+                    throw e;
                 }
-            } catch (e) {
-                this.stop("Runtime error");
-                throw e;
             }
         }
     }
@@ -135,10 +144,25 @@ export class PTM {
         this.branching = true;
         this.display?.reset();
         this.callStack = [];
+        this.loopStack = new LoopStack();
         this.vars = {};
         this.arrays = {};
         this.palette = new Palette();
         this.tileset = new Tileset();
+    }
+
+    createDisplay(width: number, height: number, hStretch: number, vStretch: number, defaultBufLayers: number) {
+        if (this.display) {
+            this.display.reset();
+            if (this.cursor) {
+                this.cursor.set(this.display.getDefaultBuffer(), 0, 0, 0);
+            }
+        } else {
+            this.display = new Display(this.displayElement, 
+                width, height, hStretch, vStretch, defaultBufLayers, 
+                this.palette, this.tileset, this.animationInterval);
+            this.cursor = new Cursor(this.display.getDefaultBuffer());
+        }
     }
 
     gotoSubroutine(ixProgramLine: number) {
@@ -161,17 +185,13 @@ export class PTM {
         }
     }
 
-    createDisplay(width: number, height: number, hStretch: number, vStretch: number, defaultBufLayers: number) {
-        if (this.display) {
-            this.display.reset();
-            if (this.cursor) {
-                this.cursor.set(this.display.getDefaultBuffer(), 0, 0, 0);
-            }
-        } else {
-            this.display = new Display(this.displayElement, 
-                width, height, hStretch, vStretch, defaultBufLayers, 
-                this.palette, this.tileset, this.animationInterval);
-            this.cursor = new Cursor(this.display.getDefaultBuffer());
+    pause(cycles: number) {
+        this.pauseCycles = cycles;
+    }
+
+    printTileStringAtCursorPos(str: string) {
+        if (this.cursor && this.display) {
+            this.cursor.buffer.setTileString(str, this.cursor, this.currentTextFgc, this.currentTextBgc, this.currentTile.transparent);
         }
     }
 }

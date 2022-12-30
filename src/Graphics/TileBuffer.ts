@@ -1,3 +1,4 @@
+import { Cursor } from "./Cursor";
 import { TileBufferLayer } from "./TileBufferLayer";
 import { TileSeq } from "./TileSeq";
 import { Viewport } from "./Viewport";
@@ -42,13 +43,20 @@ export class TileBuffer {
         this.layers[layer].setTile(tile, x, y);
     }
 
-    setTileString(str: string, layer: number, x: number, y: number, fgc: number, bgc: number, transp: boolean) {
+    setTileString(str: string, cursor: Cursor, fgc: number, bgc: number, transp: boolean) {
+        const px = cursor.x;
         for (let i = 0; i < str.length; i++) {
             const tile = new TileSeq();
             const ch = str.charCodeAt(i);
-            tile.transparent = transp;
-            tile.setSingle(ch, fgc, bgc);
-            this.setTile(tile, layer, x + i, y);
+            if (str.charAt(i) === "\n") {
+                cursor.y++;
+                cursor.x = px;
+            } else {
+                tile.transparent = transp;
+                tile.setSingle(ch, fgc, bgc);
+                this.setTile(tile, cursor.layer, cursor.x, cursor.y);
+                cursor.x++;
+            }
         }
     }
 

@@ -5,22 +5,23 @@
 </head>
 <body>
 <div id="display"></div>
-<script type="text/ptml" src="test.ptml">
+<script type="text/ptml">
 
     CALL init_gfx
-    SCREEN 256,192,3,3,2
+    SCREEN 256,192,2,4,4
     
-    WCOL 1    
-    VAR hello,"Hello World!"
-    LOCATE 0,0
-    COLOR 2,3
-    PRINT hello
-    COLOR 4,5
-    LOCATE 0,0
-    PRINT.ADD hello
-    VSYNC
+    WCOL 1
+	COLOR 0
+	TRON
+    VAR msg,"Hello World!"
+	VAR pause,100
+	LOCATE 1,1
 
-    EXIT
+loop:
+	PRINTL msg
+	VSYNC
+	PAUSE pause
+	GOTO loop
 
 init_gfx:
 
