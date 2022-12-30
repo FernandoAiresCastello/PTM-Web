@@ -5,10 +5,7 @@ export class Palette {
     colors: ColorString[];
 
     constructor() {
-        this.colors = this.init(256, "#000000");
-
-        this.set(0, "#000000");
-        this.set(1, "#ffffff");
+        this.colors = [];
     }
 
     init(numberOfColors: number, defaultColor: ColorString): ColorString[] {

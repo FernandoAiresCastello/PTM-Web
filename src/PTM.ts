@@ -1,9 +1,10 @@
+import { PTM_Main } from "./main";
+import { PTM_RuntimeError } from "./Errors/PTM_RuntimeError";
 import { Parser } from "./Parser/Parser";
 import { Program } from "./Parser/Program";
 import { Commands } from "./Interpreter/Commands";
 import { Interpreter } from "./Interpreter/Interpreter";
 import { ProgramLine } from "./Parser/ProgramLine";
-import { PTM_RuntimeError } from "./Errors/PTM_RuntimeError";
 import { Variables } from "./Interpreter/Variables";
 import { Arrays } from "./Interpreter/Arrays";
 import { Palette } from "./Graphics/Palette";
@@ -12,8 +13,10 @@ import { Display } from "./Graphics/Display";
 import { Cursor } from "./Graphics/Cursor";
 import { TileSeq } from "./Graphics/TileSeq";
 import { DefaultTileset } from "./Graphics/DefaultTileset";
-import { PTM_Main } from "./main";
-import { Loop, LoopStack } from "./Interpreter/Loop";
+import { Loop, LoopStack } from "./Interpreter/LoopStack";
+import { CallStack } from "./Interpreter/CallStack";
+import { Logger } from "./Interpreter/Logger";
+import { DefaultPalette } from "./Graphics/DefaultPalette";
 
 document.addEventListener("DOMContentLoaded", PTM_Main);
 
@@ -28,29 +31,28 @@ export class PTM {
     currentTile: TileSeq;
     currentTextFgc: number;
     currentTextBgc: number;
-
-    private readonly logDebugFormat = "color:#0ff";
-    private readonly logExecFormat = "color:#ff0";
-    private readonly trace: boolean = false;
-    private readonly cycleInterval: number = 1;
-    private readonly animationInterval: number = 400;
+    readonly log: Logger;
     readonly displayElement: HTMLElement;
     readonly commands: Commands;
     readonly intp: Interpreter;
+    
+    private readonly cycleInterval: number = 1;
+    private readonly animationInterval: number = 400;
     private readonly parser: Parser;
     private readonly program: Program;
-    private readonly cycleIntervalId: number;
+    private readonly cycleExecHandle: number;
     private programPtr: number;
     private branching: boolean;
     private currentLine: ProgramLine | null;
     private pauseCycles: number;
-    private callStack: number[];
+    private callStack: CallStack;
     private loopStack: LoopStack;
 
     constructor(displayElement: HTMLElement, srcPtml: string) {
-
+        // Initialize objects
         this.displayElement = displayElement;
         this.display = null;
+        this.log = new Logger();
         this.parser = new Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter(this, this.program);
@@ -59,50 +61,25 @@ export class PTM {
         this.branching = false;
         this.currentLine = null;
         this.pauseCycles = 0;
-        this.callStack = [];
+        this.callStack = new CallStack();
         this.loopStack = new LoopStack();
         this.vars = {};
         this.arrays = {};
         this.palette = new Palette();
         this.tileset = new Tileset();
-        DefaultTileset.init(this.tileset);
         this.cursor = null;
         this.currentTile = new TileSeq();
         this.currentTextFgc = 1;
         this.currentTextBgc = 0;
-
-        this.cycleIntervalId = this.start();
-    }
-
-    logInfo(msg: string) {
-        console.log(msg);
-    }
-
-    logDebug(id: string, value: string | string[]) {
-        let msg = "%c";
-        if (Array.isArray(value)) {
-            msg += "[";
-            for (let i = 0; i < value.length; i++) {
-                msg += `"${value[i]}"`;
-                if (i < value.length - 1) {
-                    msg += ", ";
-                }
-            }
-            msg += "]";
-        } else {
-            msg += value;
-        }
-        console.log(msg, this.logDebugFormat);
-    }
-
-    logExecution(programLine: ProgramLine) {
-        if (this.trace) {
-            console.log(` ${programLine.lineNr}: %c${programLine.src}`, this.logExecFormat);
-        }
+        // Configure defaults
+        DefaultPalette.init(this.palette);
+        DefaultTileset.init(this.tileset);
+        // Begin program execution
+        this.cycleExecHandle = this.start();
     }
 
     start(): number {
-        this.logInfo("Interpreter started");
+        this.log.info("Interpreter started");
         return window.setInterval(() => this.cycle(), this.cycleInterval);
     }
 
@@ -130,7 +107,7 @@ export class PTM {
     }
 
     stop(reason?: string) {
-        window.clearInterval(this.cycleIntervalId);
+        window.clearInterval(this.cycleExecHandle);
         let msg = "Interpreter exited";
         if (reason) {
             msg += `\nReason: ${reason}`;
@@ -139,16 +116,23 @@ export class PTM {
     }
 
     reset() {
-        this.logInfo("Machine reset");
+        this.log.info("Machine reset");
         this.programPtr = 0;
         this.branching = true;
         this.display?.reset();
-        this.callStack = [];
-        this.loopStack = new LoopStack();
+        if (this.display && this.cursor) {
+            this.cursor.reset(this.display.getDefaultBuffer());
+        }
+        this.callStack.clear();
+        this.loopStack.clear();
         this.vars = {};
         this.arrays = {};
-        this.palette = new Palette();
-        this.tileset = new Tileset();
+        this.pauseCycles = 0;
+        this.currentTile = new TileSeq();
+        this.currentTextFgc = 1;
+        this.currentTextBgc = 0;
+        DefaultPalette.init(this.palette);
+        DefaultTileset.init(this.tileset);
     }
 
     createDisplay(width: number, height: number, hStretch: number, vStretch: number, defaultBufLayers: number) {
@@ -177,7 +161,7 @@ export class PTM {
     }
 
     returnFromSubroutine() {
-        if (this.callStack.length > 0) {
+        if (!this.callStack.isEmpty()) {
             this.programPtr = this.callStack.pop()!;
             this.branching = true;
         } else {

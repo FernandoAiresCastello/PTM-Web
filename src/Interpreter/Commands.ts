@@ -9,12 +9,13 @@ export class Commands {
 
     private readonly ptm: PTM;
     private readonly intp: Interpreter;
-    private readonly commandDict: Command;
+    private readonly commandList: Command;
    
     constructor(ptm: PTM, intp: Interpreter) {
         this.ptm = ptm;
         this.intp = intp;
-        this.commandDict = {
+        this.commandList = {
+
             ["TEST"]: this.TEST,
             ["DEBUG"]: this.DEBUG,
             ["DATA"]: this.DATA,
@@ -62,9 +63,9 @@ export class Commands {
     execute(programLine: ProgramLine) {
         const cmd = programLine.cmd;
         if (cmd) {
-            this.ptm.logExecution(programLine);
+            this.ptm.log.printCommandExecution(programLine);
             this.intp.programLine = programLine;
-            const commandFunction = this.commandDict[cmd];
+            const commandFunction = this.commandList[cmd];
             if (commandFunction) {
                 commandFunction(this.ptm, this.intp);
             } else {
@@ -83,11 +84,11 @@ export class Commands {
         if (intp.isArray(0)) {
             const arrId = intp.getArg(0).text;
             const arr = intp.requireExistingArray(0);
-            ptm.logDebug(arrId, arr);
+            ptm.log.printVariableOrArray(arrId, arr);
         } else {
             const varId = intp.getArg(0).text;
             const value = intp.requireString(0);
-            ptm.logDebug(varId, value);
+            ptm.log.printVariableOrArray(varId, value);
         }
     }
 

@@ -40,4 +40,8 @@ export class LoopStack {
     isEmpty(): boolean {
         return this.loops.length === 0;
     }
+
+    clear() {
+        this.loops = [];
+    }
 }

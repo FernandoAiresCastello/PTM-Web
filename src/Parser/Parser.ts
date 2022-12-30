@@ -22,7 +22,7 @@ export class Parser {
     }
 
     parse() : Program {
-        this.ptm.logInfo("Parse/compile started");
+        this.ptm.log.info("Parse/compile started");
         this.program.lines = [];
         let srcLineNr = 0;
         let actualLineIndex = 0;
@@ -48,7 +48,7 @@ export class Parser {
                 // Ignore entire line
             }
         });
-        this.ptm.logInfo("Parse/compile finished normally");
+        this.ptm.log.info("Parse/compile finished normally");
         return this.program;
     }
 

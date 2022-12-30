@@ -25,4 +25,11 @@ export class Cursor {
         this.x = x;
         this.y = y;
     }
+
+    reset(buffer: TileBuffer) {
+        this.buffer = buffer;
+        this.layer = 0;
+        this.x = 0;
+        this.y = 0;
+    }
 }

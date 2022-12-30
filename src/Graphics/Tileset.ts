@@ -5,10 +5,10 @@ export class Tileset {
     tiles: PixelBlock[];
 
     constructor() {
-        this.tiles = this.init(256);
+        this.tiles = [];
     }
 
-    init(numberOfTiles: number): PixelBlock[] {
+    initBlank(numberOfTiles: number): PixelBlock[] {
         this.tiles = [];
         for (let i = 0; i < numberOfTiles; i++) {
             this.tiles.push(new PixelBlock());

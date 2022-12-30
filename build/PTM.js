@@ -74,15 +74,35 @@ class Cursor {
         this.x = x;
         this.y = y;
     }
+    reset(buffer) {
+        this.buffer = buffer;
+        this.layer = 0;
+        this.x = 0;
+        this.y = 0;
+    }
 }
 exports.Cursor = Cursor;
 
 },{}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.DefaultPalette = void 0;
+class DefaultPalette {
+    static init(pal) {
+        pal.init(256, "#000000");
+        pal.set(0, "#000000");
+        pal.set(1, "#ffffff");
+    }
+}
+exports.DefaultPalette = DefaultPalette;
+
+},{}],7:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.DefaultTileset = void 0;
 class DefaultTileset {
     static init(chr) {
+        chr.initBlank(256);
         chr.set(0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
         chr.set(0x21, 0x30, 0x30, 0x30, 0x30, 0x30, 0x00, 0x30, 0x00);
         chr.set(0x22, 0x6c, 0x6c, 0x48, 0x00, 0x00, 0x00, 0x00, 0x00);
@@ -183,7 +203,7 @@ class DefaultTileset {
 }
 exports.DefaultTileset = DefaultTileset;
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Display = void 0;
@@ -294,7 +314,7 @@ class Display {
 }
 exports.Display = Display;
 
-},{"./DisplayBase":8,"./TileBuffer":12}],8:[function(require,module,exports){
+},{"./DisplayBase":9,"./TileBuffer":13}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DisplayBase = void 0;
@@ -400,15 +420,13 @@ class DisplayBase {
 }
 exports.DisplayBase = DisplayBase;
 
-},{"../Errors/PTM_InitializationError":1,"./CanvasPoint":4,"./PixelBlock":10}],9:[function(require,module,exports){
+},{"../Errors/PTM_InitializationError":1,"./CanvasPoint":4,"./PixelBlock":11}],10:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Palette = void 0;
 class Palette {
     constructor() {
-        this.colors = this.init(256, "#000000");
-        this.set(0, "#000000");
-        this.set(1, "#ffffff");
+        this.colors = [];
     }
     init(numberOfColors, defaultColor) {
         this.colors = [];
@@ -429,7 +447,7 @@ class Palette {
 }
 exports.Palette = Palette;
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 "use strict";
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
@@ -509,7 +527,7 @@ PixelBlock.Size = _a.Width * _a.Height;
 PixelBlock.PixelOn = '1';
 PixelBlock.PixelOff = '0';
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tile = void 0;
@@ -537,7 +555,7 @@ class Tile {
 }
 exports.Tile = Tile;
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TileBuffer = void 0;
@@ -604,7 +622,7 @@ class TileBuffer {
 }
 exports.TileBuffer = TileBuffer;
 
-},{"./TileBufferLayer":13,"./TileSeq":14,"./Viewport":16}],13:[function(require,module,exports){
+},{"./TileBufferLayer":14,"./TileSeq":15,"./Viewport":17}],14:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TileBufferLayer = void 0;
@@ -642,7 +660,7 @@ class TileBufferLayer {
 }
 exports.TileBufferLayer = TileBufferLayer;
 
-},{"./TileSeq":14}],14:[function(require,module,exports){
+},{"./TileSeq":15}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TileSeq = void 0;
@@ -682,16 +700,16 @@ class TileSeq {
 }
 exports.TileSeq = TileSeq;
 
-},{"./Tile":11}],15:[function(require,module,exports){
+},{"./Tile":12}],16:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tileset = void 0;
 const PixelBlock_1 = require("./PixelBlock");
 class Tileset {
     constructor() {
-        this.tiles = this.init(256);
+        this.tiles = [];
     }
-    init(numberOfTiles) {
+    initBlank(numberOfTiles) {
         this.tiles = [];
         for (let i = 0; i < numberOfTiles; i++) {
             this.tiles.push(new PixelBlock_1.PixelBlock());
@@ -713,7 +731,7 @@ class Tileset {
 }
 exports.Tileset = Tileset;
 
-},{"./PixelBlock":10}],16:[function(require,module,exports){
+},{"./PixelBlock":11}],17:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Viewport = void 0;
@@ -739,7 +757,30 @@ class Viewport {
 }
 exports.Viewport = Viewport;
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CallStack = void 0;
+class CallStack {
+    constructor() {
+        this.programPtrs = [];
+    }
+    push(programPtr) {
+        this.programPtrs.push(programPtr);
+    }
+    pop() {
+        return this.programPtrs.pop();
+    }
+    isEmpty() {
+        return this.programPtrs.length === 0;
+    }
+    clear() {
+        this.programPtrs = [];
+    }
+}
+exports.CallStack = CallStack;
+
+},{}],19:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Commands = void 0;
@@ -748,7 +789,7 @@ class Commands {
     constructor(ptm, intp) {
         this.ptm = ptm;
         this.intp = intp;
-        this.commandDict = {
+        this.commandList = {
             ["TEST"]: this.TEST,
             ["DEBUG"]: this.DEBUG,
             ["DATA"]: this.DATA,
@@ -795,9 +836,9 @@ class Commands {
     execute(programLine) {
         const cmd = programLine.cmd;
         if (cmd) {
-            this.ptm.logExecution(programLine);
+            this.ptm.log.printCommandExecution(programLine);
             this.intp.programLine = programLine;
-            const commandFunction = this.commandDict[cmd];
+            const commandFunction = this.commandList[cmd];
             if (commandFunction) {
                 commandFunction(this.ptm, this.intp);
             }
@@ -816,12 +857,12 @@ class Commands {
         if (intp.isArray(0)) {
             const arrId = intp.getArg(0).text;
             const arr = intp.requireExistingArray(0);
-            ptm.logDebug(arrId, arr);
+            ptm.log.printVariableOrArray(arrId, arr);
         }
         else {
             const varId = intp.getArg(0).text;
             const value = intp.requireString(0);
-            ptm.logDebug(varId, value);
+            ptm.log.printVariableOrArray(varId, value);
         }
     }
     DATA(ptm, intp) {
@@ -1089,7 +1130,7 @@ class Commands {
 }
 exports.Commands = Commands;
 
-},{"../Errors/PTM_RuntimeError":3}],18:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Interpreter = void 0;
@@ -1314,7 +1355,45 @@ class Interpreter {
 }
 exports.Interpreter = Interpreter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":24}],19:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":27}],21:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Logger = void 0;
+class Logger {
+    constructor() {
+        this.trace = false;
+        this.varPrintStyle = "color:#0ff";
+        this.cmdExecPrintStyle = "color:#ff0";
+    }
+    info(msg) {
+        console.log(msg);
+    }
+    printVariableOrArray(id, value) {
+        let msg = id + " = %c";
+        if (Array.isArray(value)) {
+            msg += "[";
+            for (let i = 0; i < value.length; i++) {
+                msg += `"${value[i]}"`;
+                if (i < value.length - 1) {
+                    msg += ", ";
+                }
+            }
+            msg += "]";
+        }
+        else {
+            msg += value;
+        }
+        console.log(msg, this.varPrintStyle);
+    }
+    printCommandExecution(programLine) {
+        if (this.trace) {
+            console.log(` ${programLine.lineNr}: %c${programLine.src}`, this.cmdExecPrintStyle);
+        }
+    }
+}
+exports.Logger = Logger;
+
+},{}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoopStack = exports.Loop = void 0;
@@ -1353,35 +1432,40 @@ class LoopStack {
     isEmpty() {
         return this.loops.length === 0;
     }
+    clear() {
+        this.loops = [];
+    }
 }
 exports.LoopStack = LoopStack;
 
-},{}],20:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
+const main_1 = require("./main");
+const PTM_RuntimeError_1 = require("./Errors/PTM_RuntimeError");
 const Parser_1 = require("./Parser/Parser");
 const Commands_1 = require("./Interpreter/Commands");
 const Interpreter_1 = require("./Interpreter/Interpreter");
-const PTM_RuntimeError_1 = require("./Errors/PTM_RuntimeError");
 const Palette_1 = require("./Graphics/Palette");
 const Tileset_1 = require("./Graphics/Tileset");
 const Display_1 = require("./Graphics/Display");
 const Cursor_1 = require("./Graphics/Cursor");
 const TileSeq_1 = require("./Graphics/TileSeq");
 const DefaultTileset_1 = require("./Graphics/DefaultTileset");
-const main_1 = require("./main");
-const Loop_1 = require("./Interpreter/Loop");
+const LoopStack_1 = require("./Interpreter/LoopStack");
+const CallStack_1 = require("./Interpreter/CallStack");
+const Logger_1 = require("./Interpreter/Logger");
+const DefaultPalette_1 = require("./Graphics/DefaultPalette");
 document.addEventListener("DOMContentLoaded", main_1.PTM_Main);
 class PTM {
     constructor(displayElement, srcPtml) {
-        this.logDebugFormat = "color:#0ff";
-        this.logExecFormat = "color:#ff0";
-        this.trace = false;
         this.cycleInterval = 1;
         this.animationInterval = 400;
+        // Initialize objects
         this.displayElement = displayElement;
         this.display = null;
+        this.log = new Logger_1.Logger();
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter_1.Interpreter(this, this.program);
@@ -1390,46 +1474,24 @@ class PTM {
         this.branching = false;
         this.currentLine = null;
         this.pauseCycles = 0;
-        this.callStack = [];
-        this.loopStack = new Loop_1.LoopStack();
+        this.callStack = new CallStack_1.CallStack();
+        this.loopStack = new LoopStack_1.LoopStack();
         this.vars = {};
         this.arrays = {};
         this.palette = new Palette_1.Palette();
         this.tileset = new Tileset_1.Tileset();
-        DefaultTileset_1.DefaultTileset.init(this.tileset);
         this.cursor = null;
         this.currentTile = new TileSeq_1.TileSeq();
         this.currentTextFgc = 1;
         this.currentTextBgc = 0;
-        this.cycleIntervalId = this.start();
-    }
-    logInfo(msg) {
-        console.log(msg);
-    }
-    logDebug(id, value) {
-        let msg = "%c";
-        if (Array.isArray(value)) {
-            msg += "[";
-            for (let i = 0; i < value.length; i++) {
-                msg += `"${value[i]}"`;
-                if (i < value.length - 1) {
-                    msg += ", ";
-                }
-            }
-            msg += "]";
-        }
-        else {
-            msg += value;
-        }
-        console.log(msg, this.logDebugFormat);
-    }
-    logExecution(programLine) {
-        if (this.trace) {
-            console.log(` ${programLine.lineNr}: %c${programLine.src}`, this.logExecFormat);
-        }
+        // Configure defaults
+        DefaultPalette_1.DefaultPalette.init(this.palette);
+        DefaultTileset_1.DefaultTileset.init(this.tileset);
+        // Begin program execution
+        this.cycleExecHandle = this.start();
     }
     start() {
-        this.logInfo("Interpreter started");
+        this.log.info("Interpreter started");
         return window.setInterval(() => this.cycle(), this.cycleInterval);
     }
     cycle() {
@@ -1459,7 +1521,7 @@ class PTM {
         }
     }
     stop(reason) {
-        window.clearInterval(this.cycleIntervalId);
+        window.clearInterval(this.cycleExecHandle);
         let msg = "Interpreter exited";
         if (reason) {
             msg += `\nReason: ${reason}`;
@@ -1468,16 +1530,23 @@ class PTM {
     }
     reset() {
         var _a;
-        this.logInfo("Machine reset");
+        this.log.info("Machine reset");
         this.programPtr = 0;
         this.branching = true;
         (_a = this.display) === null || _a === void 0 ? void 0 : _a.reset();
-        this.callStack = [];
-        this.loopStack = new Loop_1.LoopStack();
+        if (this.display && this.cursor) {
+            this.cursor.reset(this.display.getDefaultBuffer());
+        }
+        this.callStack.clear();
+        this.loopStack.clear();
         this.vars = {};
         this.arrays = {};
-        this.palette = new Palette_1.Palette();
-        this.tileset = new Tileset_1.Tileset();
+        this.pauseCycles = 0;
+        this.currentTile = new TileSeq_1.TileSeq();
+        this.currentTextFgc = 1;
+        this.currentTextBgc = 0;
+        DefaultPalette_1.DefaultPalette.init(this.palette);
+        DefaultTileset_1.DefaultTileset.init(this.tileset);
     }
     createDisplay(width, height, hStretch, vStretch, defaultBufLayers) {
         if (this.display) {
@@ -1501,7 +1570,7 @@ class PTM {
         this.branching = true;
     }
     returnFromSubroutine() {
-        if (this.callStack.length > 0) {
+        if (!this.callStack.isEmpty()) {
             this.programPtr = this.callStack.pop();
             this.branching = true;
         }
@@ -1522,7 +1591,7 @@ class PTM {
             throw new PTM_RuntimeError_1.PTM_RuntimeError("Invalid loop increment: 0", this.currentLine);
         }
         this.vars[varId] = first.toString();
-        const loop = new Loop_1.Loop();
+        const loop = new LoopStack_1.Loop();
         loop.isArray = false;
         loop.lineIxBegin = this.programPtr + 1;
         loop.varId = varId;
@@ -1578,7 +1647,7 @@ class PTM {
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultTileset":6,"./Graphics/Display":7,"./Graphics/Palette":9,"./Graphics/TileSeq":14,"./Graphics/Tileset":15,"./Interpreter/Commands":17,"./Interpreter/Interpreter":18,"./Interpreter/Loop":19,"./Parser/Parser":25,"./main":29}],21:[function(require,module,exports){
+},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultPalette":6,"./Graphics/DefaultTileset":7,"./Graphics/Display":8,"./Graphics/Palette":10,"./Graphics/TileSeq":15,"./Graphics/Tileset":16,"./Interpreter/CallStack":18,"./Interpreter/Commands":19,"./Interpreter/Interpreter":20,"./Interpreter/Logger":21,"./Interpreter/LoopStack":22,"./Parser/Parser":28,"./main":32}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -1589,7 +1658,7 @@ var ExecutionTime;
     ExecutionTime["RunTime"] = "RunTime";
 })(ExecutionTime = exports.ExecutionTime || (exports.ExecutionTime = {}));
 
-},{}],22:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NumberBase = void 0;
@@ -1601,7 +1670,7 @@ var NumberBase;
     NumberBase["Binary"] = "Binary";
 })(NumberBase = exports.NumberBase || (exports.NumberBase = {}));
 
-},{}],23:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
@@ -1740,7 +1809,7 @@ Param.BinPrefix = "&B";
 Param.ArrayLeftBrace = "[";
 Param.ArrayRightBrace = "]";
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":18,"./NumberBase":22,"./ParamType":24}],24:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":20,"./NumberBase":25,"./ParamType":27}],27:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
@@ -1754,7 +1823,7 @@ var ParamType;
     ParamType["ArrayIxVarIdentifier"] = "ArrayIxVarIdentifier";
 })(ParamType = exports.ParamType || (exports.ParamType = {}));
 
-},{}],25:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
@@ -1772,7 +1841,7 @@ class Parser {
         this.program = new Program_1.Program();
     }
     parse() {
-        this.ptm.logInfo("Parse/compile started");
+        this.ptm.log.info("Parse/compile started");
         this.program.lines = [];
         let srcLineNr = 0;
         let actualLineIndex = 0;
@@ -1803,7 +1872,7 @@ class Parser {
                 // Ignore entire line
             }
         });
-        this.ptm.logInfo("Parse/compile finished normally");
+        this.ptm.log.info("Parse/compile finished normally");
         return this.program;
     }
     parseSrcLine(srcLine, lineNr) {
@@ -1893,7 +1962,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"./ExecutionTime":21,"./Param":23,"./Program":26,"./ProgramLine":27,"./ProgramLineType":28}],26:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"./ExecutionTime":24,"./Param":26,"./Program":29,"./ProgramLine":30,"./ProgramLineType":31}],29:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;
@@ -1914,7 +1983,7 @@ class Program {
 }
 exports.Program = Program;
 
-},{}],27:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLine = void 0;
@@ -1935,7 +2004,7 @@ class ProgramLine {
 }
 exports.ProgramLine = ProgramLine;
 
-},{"./ExecutionTime":21,"./ProgramLineType":28}],28:[function(require,module,exports){
+},{"./ExecutionTime":24,"./ProgramLineType":31}],31:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLineType = void 0;
@@ -1947,7 +2016,7 @@ var ProgramLineType;
     ProgramLineType["Label"] = "Label";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}],29:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM_Main = void 0;
@@ -1996,4 +2065,4 @@ function PTM_Main() {
 }
 exports.PTM_Main = PTM_Main;
 
-},{"./Errors/PTM_InitializationError":1,"./PTM":20}]},{},[20]);
+},{"./Errors/PTM_InitializationError":1,"./PTM":23}]},{},[23]);
