@@ -15,7 +15,6 @@ export class Commands {
         this.ptm = ptm;
         this.intp = intp;
         this.commandDict = {
-
             ["TEST"]: this.TEST,
             ["DEBUG"]: this.DEBUG,
             ["DATA"]: this.DATA,

@@ -1806,17 +1806,40 @@ function PTM_Main() {
         "  Welcome to the PTM - Programmable Tile Machine! \n" +
         "  Developed by: Fernando Aires Castello  (C) 2022 \n" +
         "==================================================", "color:#0f0");
+    let ptml = "";
     const ptmlElement = document.querySelector('script[type="text/ptml"]');
-    if (!ptmlElement || !ptmlElement.textContent) {
+    if (ptmlElement) {
+        if (ptmlElement.textContent) {
+            ptml = ptmlElement.textContent;
+            console.log("PTML code loaded from script tag (inline code)");
+        }
+        else if (ptmlElement.src) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", ptmlElement.src);
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                    ptml = xhr.responseText;
+                    console.log(`PTML code loaded from script tag (external file: ${ptmlElement.src})`);
+                }
+                else {
+                    throw new PTM_InitializationError_1.PTM_InitializationError(`Unable to load PTML code from file: ${ptmlElement.src}`);
+                }
+            };
+            xhr.send();
+        }
+        else {
+            throw new PTM_InitializationError_1.PTM_InitializationError("Unable to load PTML code from script tag");
+        }
+    }
+    else {
         throw new PTM_InitializationError_1.PTM_InitializationError("PTML script tag not found");
     }
-    console.log("PTML code loaded from script tag");
     const displayElement = document.getElementById("display");
     if (!displayElement) {
         throw new PTM_InitializationError_1.PTM_InitializationError("Display element not found");
     }
     console.log("Display element found");
-    window.PTM = new PTM_1.PTM(displayElement, ptmlElement.textContent);
+    window.PTM = new PTM_1.PTM(displayElement, ptml);
 }
 exports.PTM_Main = PTM_Main;
 
