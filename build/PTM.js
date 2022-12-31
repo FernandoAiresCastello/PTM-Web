@@ -1699,6 +1699,8 @@ class PTM {
         loop.step = step;
         this.loopStack.push(loop);
     }
+    beginArrayLoop() {
+    }
     endLoop() {
         if (this.loopStack.isEmpty()) {
             return;
@@ -1737,8 +1739,6 @@ class PTM {
         }
         this.programPtr = loop.lineIxBegin;
         this.branching = true;
-    }
-    beginArrayLoop() {
     }
     abortLoop() {
         if (this.loopStack.isEmpty()) {
@@ -2240,10 +2240,10 @@ const PTM_InitializationError_1 = require("./Errors/PTM_InitializationError");
 const PTM_1 = require("./PTM");
 function PTM_Main() {
     console.log("%c" +
-        "==================================================\n" +
-        "  Welcome to the PTM - Programmable Tile Machine! \n" +
-        "  Developed by: Fernando Aires Castello  (C) 2022 \n" +
-        "==================================================", "color:#0f0");
+        "======================================================\n" +
+        "      Welcome to the Programmable Tile Machine!       \n" +
+        "  Developed by Fernando Aires Castello (C) 2022-2023  \n" +
+        "======================================================", "color: #0f0");
     let ptml = "";
     const ptmlElement = document.querySelector('script[type="text/ptml"]');
     if (ptmlElement) {

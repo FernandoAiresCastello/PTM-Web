@@ -3,11 +3,13 @@ import { PTM } from "./PTM";
 
 export function PTM_Main() {
     console.log("%c" +
-        "==================================================\n" +
-        "  Welcome to the PTM - Programmable Tile Machine! \n" +
-        "  Developed by: Fernando Aires Castello  (C) 2022 \n" +
-        "==================================================",
-        "color:#0f0"
+
+        "======================================================\n" +
+        "      Welcome to the Programmable Tile Machine!       \n" +
+        "  Developed by Fernando Aires Castello (C) 2022-2023  \n" +
+        "======================================================",
+
+        "color: #0f0"
     );
     let ptml = "";
     const ptmlElement = document.querySelector('script[type="text/ptml"]') as HTMLScriptElement;
