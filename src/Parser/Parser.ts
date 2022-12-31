@@ -30,24 +30,34 @@ export class Parser {
         srcLines.forEach((srcLine) => {
             srcLineNr++;
             const newPrgLine = this.parseSrcLine(srcLine, srcLineNr);
-            if (newPrgLine.type === ProgramLineType.Executable || newPrgLine.type === ProgramLineType.If || newPrgLine.type === ProgramLineType.EndIf) {
+
+            if (newPrgLine.type === ProgramLineType.Command || 
+                newPrgLine.type === ProgramLineType.If || 
+                newPrgLine.type === ProgramLineType.EndIf ||
+                newPrgLine.type === ProgramLineType.EndFor) {
+
                 if (newPrgLine.execTime === ExecutionTime.RunTime) {
                     this.program.addLine(newPrgLine);
                     actualLineIndex++;
                 } else if (newPrgLine.execTime === ExecutionTime.CompileTime) {
                     this.ptm.commands.execute(newPrgLine);
+
                 } else if (newPrgLine.execTime === ExecutionTime.Undefined) {
                     throw new PTM_ParseError("Could not determine execution time for this line", newPrgLine);
                 }
+
             } else if (newPrgLine.type === ProgramLineType.Label) {
                 const label = newPrgLine.src;
                 this.program.addLabel(label, actualLineIndex);
+
             } else if (newPrgLine.type === ProgramLineType.Undefined) {
                 throw new PTM_ParseError("Could not determine type of this line", newPrgLine);
+
             } else if (newPrgLine.type === ProgramLineType.Ignore) {
                 // Ignore entire line
             }
         });
+
         this.ptm.log.info("Parse/compile finished normally");
         return this.program;
     }
@@ -66,10 +76,13 @@ export class Parser {
         } else if (line.src.trim().toUpperCase() === "ENDIF") {
             line.cmd = "ENDIF";
             line.type = ProgramLineType.EndIf;
+        } else if (line.src.trim().toUpperCase() === "NEXT") {
+            line.cmd = "NEXT";
+            line.type = ProgramLineType.EndFor;
         } else {
             line.cmd = this.extractCommand(line);
             line.params = this.extractParams(line);
-            line.type = ProgramLineType.Executable;
+            line.type = ProgramLineType.Command;
         }
         line.execTime = this.determineExecutionTime(line.cmd!);
         return line;

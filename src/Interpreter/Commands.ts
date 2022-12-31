@@ -58,6 +58,8 @@ export class Commands {
             ["PAUSE"]: this.PAUSE,
             ["FOR"]: this.FOR,
             ["NEXT"]: this.NEXT,
+            ["BRK"]: this.BRK,
+            ["SKIP"]: this.SKIP,
             ["IF.EQ"]: this.IF_EQ,
             ["IF.NEQ"]: this.IF_NEQ,
             ["IF.GT"]: this.IF_GT,
@@ -401,6 +403,16 @@ export class Commands {
     NEXT(ptm: PTM, intp: Interpreter) {
         intp.argc(0);
         ptm.endLoop();
+    }
+
+    BRK(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
+        ptm.abortLoop();
+    }
+
+    SKIP(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
+        ptm.skipLoopIteration();
     }
 
     IF_EQ(ptm: PTM, intp: Interpreter) {

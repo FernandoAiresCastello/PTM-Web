@@ -2,8 +2,9 @@ export enum ProgramLineType {
     
     Undefined = "Undefined",
     Ignore = "Ignore",
-    Executable = "Executable",
+    Command = "Command",
     Label = "Label",
     If = "If",
-    EndIf = "EndIf"
+    EndIf = "EndIf",
+    EndFor = "EndFor"
 }

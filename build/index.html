@@ -20,6 +20,9 @@
 	
 	IF.EQ test,"hello"
 		FOR i,1,5
+			IF.EQ i,3
+				BRK
+			ENDIF
 			LOCATE x,y
 			PRINT i
 			INC y

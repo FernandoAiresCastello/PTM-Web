@@ -200,6 +200,9 @@ export class PTM {
         this.loopStack.push(loop);
     }
 
+    beginArrayLoop() {
+    }
+
     endLoop() {
         if (this.loopStack.isEmpty()) {
             return;
@@ -241,10 +244,26 @@ export class PTM {
         this.branching = true;
     }
 
-    beginArrayLoop() {
+    abortLoop() {
+        if (this.loopStack.isEmpty()) {
+            return;
+        }
+        this.loopStack.pop();
+        
+        let endForPtr = -1;
+        for (let i = this.programPtr; i < this.program.length(); i++) {
+            const line = this.program.lines[i];
+            if (line.type === ProgramLineType.EndFor) {
+                endForPtr = i;
+                break;
+            }
+        }
+        this.programPtr = endForPtr + 1;
+        this.branching = true;
     }
 
-    breakLoop() {
+    skipLoopIteration() {
+        this.endLoop();
     }
 
     beginIfBlock(cmp: Comparison, a: string, b: string) {
@@ -271,7 +290,7 @@ export class PTM {
         }
     }
 
-    gotoMatchingEndIf() {
+    private gotoMatchingEndIf() {
         let endIfPtr = -1;
         for (let i = this.programPtr; i < this.program.length(); i++) {
             const line = this.program.lines[i];

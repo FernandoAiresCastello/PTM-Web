@@ -832,6 +832,8 @@ class Commands {
             ["PAUSE"]: this.PAUSE,
             ["FOR"]: this.FOR,
             ["NEXT"]: this.NEXT,
+            ["BRK"]: this.BRK,
+            ["SKIP"]: this.SKIP,
             ["IF.EQ"]: this.IF_EQ,
             ["IF.NEQ"]: this.IF_NEQ,
             ["IF.GT"]: this.IF_GT,
@@ -1134,6 +1136,14 @@ class Commands {
     NEXT(ptm, intp) {
         intp.argc(0);
         ptm.endLoop();
+    }
+    BRK(ptm, intp) {
+        intp.argc(0);
+        ptm.abortLoop();
+    }
+    SKIP(ptm, intp) {
+        intp.argc(0);
+        ptm.skipLoopIteration();
     }
     IF_EQ(ptm, intp) {
         intp.argc(2);
@@ -1730,7 +1740,24 @@ class PTM {
     }
     beginArrayLoop() {
     }
-    breakLoop() {
+    abortLoop() {
+        if (this.loopStack.isEmpty()) {
+            return;
+        }
+        this.loopStack.pop();
+        let endForPtr = -1;
+        for (let i = this.programPtr; i < this.program.length(); i++) {
+            const line = this.program.lines[i];
+            if (line.type === ProgramLineType_1.ProgramLineType.EndFor) {
+                endForPtr = i;
+                break;
+            }
+        }
+        this.programPtr = endForPtr + 1;
+        this.branching = true;
+    }
+    skipLoopIteration() {
+        this.endLoop();
     }
     beginIfBlock(cmp, a, b) {
         if (cmp === Comparison_1.Comparison.Equal) {
@@ -2019,7 +2046,10 @@ class Parser {
         srcLines.forEach((srcLine) => {
             srcLineNr++;
             const newPrgLine = this.parseSrcLine(srcLine, srcLineNr);
-            if (newPrgLine.type === ProgramLineType_1.ProgramLineType.Executable || newPrgLine.type === ProgramLineType_1.ProgramLineType.If || newPrgLine.type === ProgramLineType_1.ProgramLineType.EndIf) {
+            if (newPrgLine.type === ProgramLineType_1.ProgramLineType.Command ||
+                newPrgLine.type === ProgramLineType_1.ProgramLineType.If ||
+                newPrgLine.type === ProgramLineType_1.ProgramLineType.EndIf ||
+                newPrgLine.type === ProgramLineType_1.ProgramLineType.EndFor) {
                 if (newPrgLine.execTime === ExecutionTime_1.ExecutionTime.RunTime) {
                     this.program.addLine(newPrgLine);
                     actualLineIndex++;
@@ -2063,10 +2093,14 @@ class Parser {
             line.cmd = "ENDIF";
             line.type = ProgramLineType_1.ProgramLineType.EndIf;
         }
+        else if (line.src.trim().toUpperCase() === "NEXT") {
+            line.cmd = "NEXT";
+            line.type = ProgramLineType_1.ProgramLineType.EndFor;
+        }
         else {
             line.cmd = this.extractCommand(line);
             line.params = this.extractParams(line);
-            line.type = ProgramLineType_1.ProgramLineType.Executable;
+            line.type = ProgramLineType_1.ProgramLineType.Command;
         }
         line.execTime = this.determineExecutionTime(line.cmd);
         return line;
@@ -2191,10 +2225,11 @@ var ProgramLineType;
 (function (ProgramLineType) {
     ProgramLineType["Undefined"] = "Undefined";
     ProgramLineType["Ignore"] = "Ignore";
-    ProgramLineType["Executable"] = "Executable";
+    ProgramLineType["Command"] = "Command";
     ProgramLineType["Label"] = "Label";
     ProgramLineType["If"] = "If";
     ProgramLineType["EndIf"] = "EndIf";
+    ProgramLineType["EndFor"] = "EndFor";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
 },{}],34:[function(require,module,exports){
