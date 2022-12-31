@@ -2,6 +2,7 @@ import { PTM } from "../PTM";
 import { PTM_RuntimeError } from "../Errors/PTM_RuntimeError";
 import { Interpreter } from "./Interpreter";
 import { ProgramLine } from "../Parser/ProgramLine";
+import { Comparison } from "./Comparison";
 
 type Command = { [cmd: string] : (ptm: PTM, intp: Interpreter) => void; }
 
@@ -57,6 +58,13 @@ export class Commands {
             ["PAUSE"]: this.PAUSE,
             ["FOR"]: this.FOR,
             ["NEXT"]: this.NEXT,
+            ["IF.EQ"]: this.IF_EQ,
+            ["IF.NEQ"]: this.IF_NEQ,
+            ["IF.GT"]: this.IF_GT,
+            ["IF.GTE"]: this.IF_GTE,
+            ["IF.LT"]: this.IF_LT,
+            ["IF.LTE"]: this.IF_LTE,
+            ["ENDIF"]: this.ENDIF
         };
     }
 
@@ -387,11 +395,57 @@ export class Commands {
         const first = intp.requireNumber(1);
         const last = intp.requireNumber(2);
         const step = argc === 4 ? intp.requireNumber(3) : 1;
-        ptm.loopStart(varId, first, last, step);
+        ptm.beginLoop(varId, first, last, step);
     }
 
     NEXT(ptm: PTM, intp: Interpreter) {
         intp.argc(0);
-        ptm.loopEnd();
+        ptm.endLoop();
+    }
+
+    IF_EQ(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison.Equal, a, b);
+    }
+
+    IF_NEQ(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison.NotEqual, a, b);
+    }
+
+    IF_GT(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison.Greater, a, b);
+    }
+
+    IF_GTE(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison.GreaterOrEqual, a, b);
+    }
+
+    IF_LT(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison.Lesser, a, b);
+    }
+
+    IF_LTE(ptm: PTM, intp: Interpreter) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison.LesserOrEqual, a, b);
+    }
+
+    ENDIF(ptm: PTM, intp: Interpreter) {
+        intp.argc(0);
     }
 }

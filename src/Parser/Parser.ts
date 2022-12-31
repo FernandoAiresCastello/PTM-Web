@@ -30,7 +30,7 @@ export class Parser {
         srcLines.forEach((srcLine) => {
             srcLineNr++;
             const newPrgLine = this.parseSrcLine(srcLine, srcLineNr);
-            if (newPrgLine.type === ProgramLineType.Executable) {
+            if (newPrgLine.type === ProgramLineType.Executable || newPrgLine.type === ProgramLineType.If || newPrgLine.type === ProgramLineType.EndIf) {
                 if (newPrgLine.execTime === ExecutionTime.RunTime) {
                     this.program.addLine(newPrgLine);
                     actualLineIndex++;
@@ -59,12 +59,19 @@ export class Parser {
         } else if (line.src.trim().endsWith(":")) {
             line.type = ProgramLineType.Label;
             line.src = line.src.substring(0, line.src.length - 1);
+        } else if (line.src.trim().toUpperCase().startsWith("IF.")) {
+            line.cmd = this.extractCommand(line);
+            line.params = this.extractParams(line);
+            line.type = ProgramLineType.If;
+        } else if (line.src.trim().toUpperCase() === "ENDIF") {
+            line.cmd = "ENDIF";
+            line.type = ProgramLineType.EndIf;
         } else {
             line.cmd = this.extractCommand(line);
             line.params = this.extractParams(line);
             line.type = ProgramLineType.Executable;
-            line.execTime = this.determineExecutionTime(line.cmd);
         }
+        line.execTime = this.determineExecutionTime(line.cmd!);
         return line;
     }
 

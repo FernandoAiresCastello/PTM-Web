@@ -785,6 +785,7 @@ exports.CallStack = CallStack;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Commands = void 0;
 const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
+const Comparison_1 = require("./Comparison");
 class Commands {
     constructor(ptm, intp) {
         this.ptm = ptm;
@@ -831,6 +832,13 @@ class Commands {
             ["PAUSE"]: this.PAUSE,
             ["FOR"]: this.FOR,
             ["NEXT"]: this.NEXT,
+            ["IF.EQ"]: this.IF_EQ,
+            ["IF.NEQ"]: this.IF_NEQ,
+            ["IF.GT"]: this.IF_GT,
+            ["IF.GTE"]: this.IF_GTE,
+            ["IF.LT"]: this.IF_LT,
+            ["IF.LTE"]: this.IF_LTE,
+            ["ENDIF"]: this.ENDIF
         };
     }
     execute(programLine) {
@@ -1121,16 +1129,92 @@ class Commands {
         const first = intp.requireNumber(1);
         const last = intp.requireNumber(2);
         const step = argc === 4 ? intp.requireNumber(3) : 1;
-        ptm.loopStart(varId, first, last, step);
+        ptm.beginLoop(varId, first, last, step);
     }
     NEXT(ptm, intp) {
         intp.argc(0);
-        ptm.loopEnd();
+        ptm.endLoop();
+    }
+    IF_EQ(ptm, intp) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison_1.Comparison.Equal, a, b);
+    }
+    IF_NEQ(ptm, intp) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison_1.Comparison.NotEqual, a, b);
+    }
+    IF_GT(ptm, intp) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison_1.Comparison.Greater, a, b);
+    }
+    IF_GTE(ptm, intp) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison_1.Comparison.GreaterOrEqual, a, b);
+    }
+    IF_LT(ptm, intp) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison_1.Comparison.Lesser, a, b);
+    }
+    IF_LTE(ptm, intp) {
+        intp.argc(2);
+        const a = intp.requireString(0);
+        const b = intp.requireString(1);
+        ptm.beginIfBlock(Comparison_1.Comparison.LesserOrEqual, a, b);
+    }
+    ENDIF(ptm, intp) {
+        intp.argc(0);
     }
 }
 exports.Commands = Commands;
 
-},{"../Errors/PTM_RuntimeError":3}],20:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"./Comparison":20}],20:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Comparison = void 0;
+var Comparison;
+(function (Comparison) {
+    Comparison[Comparison["Equal"] = 0] = "Equal";
+    Comparison[Comparison["NotEqual"] = 1] = "NotEqual";
+    Comparison[Comparison["Greater"] = 2] = "Greater";
+    Comparison[Comparison["GreaterOrEqual"] = 3] = "GreaterOrEqual";
+    Comparison[Comparison["Lesser"] = 4] = "Lesser";
+    Comparison[Comparison["LesserOrEqual"] = 5] = "LesserOrEqual";
+})(Comparison = exports.Comparison || (exports.Comparison = {}));
+
+},{}],21:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.IfStack = void 0;
+class IfStack {
+    constructor() {
+        this.programPtrs = [];
+    }
+    push(programPtr) {
+        this.programPtrs.push(programPtr);
+    }
+    pop() {
+        return this.programPtrs.pop();
+    }
+    isEmpty() {
+        return this.programPtrs.length === 0;
+    }
+    clear() {
+        this.programPtrs = [];
+    }
+}
+exports.IfStack = IfStack;
+
+},{}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Interpreter = void 0;
@@ -1355,7 +1439,7 @@ class Interpreter {
 }
 exports.Interpreter = Interpreter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":27}],21:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":29}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Logger = void 0;
@@ -1393,7 +1477,7 @@ class Logger {
 }
 exports.Logger = Logger;
 
-},{}],22:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoopStack = exports.Loop = void 0;
@@ -1438,7 +1522,7 @@ class LoopStack {
 }
 exports.LoopStack = LoopStack;
 
-},{}],23:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
@@ -1457,6 +1541,9 @@ const LoopStack_1 = require("./Interpreter/LoopStack");
 const CallStack_1 = require("./Interpreter/CallStack");
 const Logger_1 = require("./Interpreter/Logger");
 const DefaultPalette_1 = require("./Graphics/DefaultPalette");
+const Comparison_1 = require("./Interpreter/Comparison");
+const ProgramLineType_1 = require("./Parser/ProgramLineType");
+const IfStack_1 = require("./Interpreter/IfStack");
 document.addEventListener("DOMContentLoaded", main_1.PTM_Main);
 class PTM {
     constructor(displayElement, srcPtml) {
@@ -1476,6 +1563,7 @@ class PTM {
         this.pauseCycles = 0;
         this.callStack = new CallStack_1.CallStack();
         this.loopStack = new LoopStack_1.LoopStack();
+        this.ifStack = new IfStack_1.IfStack();
         this.vars = {};
         this.arrays = {};
         this.palette = new Palette_1.Palette();
@@ -1586,7 +1674,7 @@ class PTM {
             this.cursor.buffer.setTileString(str, this.cursor, this.currentTextFgc, this.currentTextBgc, this.currentTile.transparent);
         }
     }
-    loopStart(varId, first, last, step) {
+    beginLoop(varId, first, last, step) {
         if (step === 0) {
             throw new PTM_RuntimeError_1.PTM_RuntimeError("Invalid loop increment: 0", this.currentLine);
         }
@@ -1601,7 +1689,7 @@ class PTM {
         loop.step = step;
         this.loopStack.push(loop);
     }
-    loopEnd() {
+    endLoop() {
         if (this.loopStack.isEmpty()) {
             return;
         }
@@ -1640,14 +1728,96 @@ class PTM {
         this.programPtr = loop.lineIxBegin;
         this.branching = true;
     }
-    arrayLoopStart() {
+    beginArrayLoop() {
     }
-    loopBreak() {
+    breakLoop() {
+    }
+    beginIfBlock(cmp, a, b) {
+        if (cmp === Comparison_1.Comparison.Equal) {
+            if (a == b) {
+                return;
+            }
+            else {
+                this.gotoMatchingEndIf();
+            }
+        }
+        else if (cmp === Comparison_1.Comparison.NotEqual) {
+            if (a != b) {
+                return;
+            }
+            else {
+                this.gotoMatchingEndIf();
+            }
+        }
+        else {
+            const aNumeric = Number(a);
+            if (Number.isNaN(aNumeric))
+                return;
+            const bNumeric = Number(b);
+            if (Number.isNaN(bNumeric))
+                return;
+            if (cmp === Comparison_1.Comparison.Greater) {
+                if (a > b) {
+                    return;
+                }
+                else {
+                    this.gotoMatchingEndIf();
+                }
+            }
+            else if (cmp === Comparison_1.Comparison.GreaterOrEqual) {
+                if (a >= b) {
+                    return;
+                }
+                else {
+                    this.gotoMatchingEndIf();
+                }
+            }
+            else if (cmp === Comparison_1.Comparison.Lesser) {
+                if (a < b) {
+                    return;
+                }
+                else {
+                    this.gotoMatchingEndIf();
+                }
+            }
+            else if (cmp === Comparison_1.Comparison.LesserOrEqual) {
+                if (a <= b) {
+                    return;
+                }
+                else {
+                    this.gotoMatchingEndIf();
+                }
+            }
+        }
+    }
+    gotoMatchingEndIf() {
+        let endIfPtr = -1;
+        for (let i = this.programPtr; i < this.program.length(); i++) {
+            const line = this.program.lines[i];
+            if (line.type === ProgramLineType_1.ProgramLineType.If) {
+                this.ifStack.push(i);
+            }
+            else if (line.type === ProgramLineType_1.ProgramLineType.EndIf) {
+                if (this.ifStack.isEmpty()) {
+                    endIfPtr = i;
+                    break;
+                }
+                else {
+                    this.ifStack.pop();
+                    if (this.ifStack.isEmpty()) {
+                        endIfPtr = i;
+                        break;
+                    }
+                }
+            }
+        }
+        this.programPtr = endIfPtr + 1;
+        this.branching = true;
     }
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultPalette":6,"./Graphics/DefaultTileset":7,"./Graphics/Display":8,"./Graphics/Palette":10,"./Graphics/TileSeq":15,"./Graphics/Tileset":16,"./Interpreter/CallStack":18,"./Interpreter/Commands":19,"./Interpreter/Interpreter":20,"./Interpreter/Logger":21,"./Interpreter/LoopStack":22,"./Parser/Parser":28,"./main":32}],24:[function(require,module,exports){
+},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultPalette":6,"./Graphics/DefaultTileset":7,"./Graphics/Display":8,"./Graphics/Palette":10,"./Graphics/TileSeq":15,"./Graphics/Tileset":16,"./Interpreter/CallStack":18,"./Interpreter/Commands":19,"./Interpreter/Comparison":20,"./Interpreter/IfStack":21,"./Interpreter/Interpreter":22,"./Interpreter/Logger":23,"./Interpreter/LoopStack":24,"./Parser/Parser":30,"./Parser/ProgramLineType":33,"./main":34}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -1658,7 +1828,7 @@ var ExecutionTime;
     ExecutionTime["RunTime"] = "RunTime";
 })(ExecutionTime = exports.ExecutionTime || (exports.ExecutionTime = {}));
 
-},{}],25:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NumberBase = void 0;
@@ -1670,7 +1840,7 @@ var NumberBase;
     NumberBase["Binary"] = "Binary";
 })(NumberBase = exports.NumberBase || (exports.NumberBase = {}));
 
-},{}],26:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
@@ -1809,7 +1979,7 @@ Param.BinPrefix = "&B";
 Param.ArrayLeftBrace = "[";
 Param.ArrayRightBrace = "]";
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":20,"./NumberBase":25,"./ParamType":27}],27:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":22,"./NumberBase":27,"./ParamType":29}],29:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
@@ -1823,7 +1993,7 @@ var ParamType;
     ParamType["ArrayIxVarIdentifier"] = "ArrayIxVarIdentifier";
 })(ParamType = exports.ParamType || (exports.ParamType = {}));
 
-},{}],28:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
@@ -1849,7 +2019,7 @@ class Parser {
         srcLines.forEach((srcLine) => {
             srcLineNr++;
             const newPrgLine = this.parseSrcLine(srcLine, srcLineNr);
-            if (newPrgLine.type === ProgramLineType_1.ProgramLineType.Executable) {
+            if (newPrgLine.type === ProgramLineType_1.ProgramLineType.Executable || newPrgLine.type === ProgramLineType_1.ProgramLineType.If || newPrgLine.type === ProgramLineType_1.ProgramLineType.EndIf) {
                 if (newPrgLine.execTime === ExecutionTime_1.ExecutionTime.RunTime) {
                     this.program.addLine(newPrgLine);
                     actualLineIndex++;
@@ -1884,12 +2054,21 @@ class Parser {
             line.type = ProgramLineType_1.ProgramLineType.Label;
             line.src = line.src.substring(0, line.src.length - 1);
         }
+        else if (line.src.trim().toUpperCase().startsWith("IF.")) {
+            line.cmd = this.extractCommand(line);
+            line.params = this.extractParams(line);
+            line.type = ProgramLineType_1.ProgramLineType.If;
+        }
+        else if (line.src.trim().toUpperCase() === "ENDIF") {
+            line.cmd = "ENDIF";
+            line.type = ProgramLineType_1.ProgramLineType.EndIf;
+        }
         else {
             line.cmd = this.extractCommand(line);
             line.params = this.extractParams(line);
             line.type = ProgramLineType_1.ProgramLineType.Executable;
-            line.execTime = this.determineExecutionTime(line.cmd);
         }
+        line.execTime = this.determineExecutionTime(line.cmd);
         return line;
     }
     extractCommand(line) {
@@ -1962,7 +2141,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"./ExecutionTime":24,"./Param":26,"./Program":29,"./ProgramLine":30,"./ProgramLineType":31}],29:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"./ExecutionTime":26,"./Param":28,"./Program":31,"./ProgramLine":32,"./ProgramLineType":33}],31:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;
@@ -1983,7 +2162,7 @@ class Program {
 }
 exports.Program = Program;
 
-},{}],30:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLine = void 0;
@@ -2004,7 +2183,7 @@ class ProgramLine {
 }
 exports.ProgramLine = ProgramLine;
 
-},{"./ExecutionTime":24,"./ProgramLineType":31}],31:[function(require,module,exports){
+},{"./ExecutionTime":26,"./ProgramLineType":33}],33:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLineType = void 0;
@@ -2014,9 +2193,11 @@ var ProgramLineType;
     ProgramLineType["Ignore"] = "Ignore";
     ProgramLineType["Executable"] = "Executable";
     ProgramLineType["Label"] = "Label";
+    ProgramLineType["If"] = "If";
+    ProgramLineType["EndIf"] = "EndIf";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}],32:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM_Main = void 0;
@@ -2065,4 +2246,4 @@ function PTM_Main() {
 }
 exports.PTM_Main = PTM_Main;
 
-},{"./Errors/PTM_InitializationError":1,"./PTM":23}]},{},[23]);
+},{"./Errors/PTM_InitializationError":1,"./PTM":25}]},{},[25]);

@@ -17,6 +17,9 @@ import { Loop, LoopStack } from "./Interpreter/LoopStack";
 import { CallStack } from "./Interpreter/CallStack";
 import { Logger } from "./Interpreter/Logger";
 import { DefaultPalette } from "./Graphics/DefaultPalette";
+import { Comparison } from "./Interpreter/Comparison";
+import { ProgramLineType } from "./Parser/ProgramLineType";
+import { IfStack } from "./Interpreter/IfStack";
 
 document.addEventListener("DOMContentLoaded", PTM_Main);
 
@@ -47,6 +50,7 @@ export class PTM {
     private pauseCycles: number;
     private callStack: CallStack;
     private loopStack: LoopStack;
+    private ifStack: IfStack;
 
     constructor(displayElement: HTMLElement, srcPtml: string) {
         // Initialize objects
@@ -63,6 +67,7 @@ export class PTM {
         this.pauseCycles = 0;
         this.callStack = new CallStack();
         this.loopStack = new LoopStack();
+        this.ifStack = new IfStack();
         this.vars = {};
         this.arrays = {};
         this.palette = new Palette();
@@ -179,7 +184,7 @@ export class PTM {
         }
     }
 
-    loopStart(varId: string, first: number, last: number, step: number) {
+    beginLoop(varId: string, first: number, last: number, step: number) {
         if (step === 0) {
             throw new PTM_RuntimeError("Invalid loop increment: 0", this.currentLine!);
         }
@@ -195,7 +200,7 @@ export class PTM {
         this.loopStack.push(loop);
     }
 
-    loopEnd() {
+    endLoop() {
         if (this.loopStack.isEmpty()) {
             return;
         }
@@ -236,9 +241,56 @@ export class PTM {
         this.branching = true;
     }
 
-    arrayLoopStart() {
+    beginArrayLoop() {
     }
 
-    loopBreak() {
+    breakLoop() {
+    }
+
+    beginIfBlock(cmp: Comparison, a: string, b: string) {
+        if (cmp === Comparison.Equal) {
+            if (a == b) { return; } else { this.gotoMatchingEndIf(); }
+        } else if (cmp === Comparison.NotEqual) {
+            if (a != b) { return; } else { this.gotoMatchingEndIf(); }
+            
+        } else {
+            const aNumeric = Number(a);
+            if (Number.isNaN(aNumeric)) return;
+            const bNumeric = Number(b);
+            if (Number.isNaN(bNumeric)) return;
+
+            if (cmp === Comparison.Greater) {
+                if (a > b) { return; } else { this.gotoMatchingEndIf(); }
+            } else if (cmp === Comparison.GreaterOrEqual) {
+                if (a >= b) { return; } else { this.gotoMatchingEndIf(); }
+            } else if (cmp === Comparison.Lesser) {
+                if (a < b) { return; } else { this.gotoMatchingEndIf(); }
+            } else if (cmp === Comparison.LesserOrEqual) {
+                if (a <= b) { return; } else { this.gotoMatchingEndIf(); }
+            }
+        }
+    }
+
+    gotoMatchingEndIf() {
+        let endIfPtr = -1;
+        for (let i = this.programPtr; i < this.program.length(); i++) {
+            const line = this.program.lines[i];
+            if (line.type === ProgramLineType.If) {
+                this.ifStack.push(i);
+            } else if (line.type === ProgramLineType.EndIf) {
+                if (this.ifStack.isEmpty()) {
+                    endIfPtr = i;
+                    break;
+                } else {
+                    this.ifStack.pop();
+                    if (this.ifStack.isEmpty()) {
+                        endIfPtr = i;
+                        break;
+                    }
+                }
+            }
+        }
+        this.programPtr = endIfPtr + 1;
+        this.branching = true;
     }
 }

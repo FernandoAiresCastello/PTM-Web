@@ -16,20 +16,23 @@
 	VAR msg,"Hello World!"
 	VAR x,1
 	VAR y,1
+	VAR test,"hello"
 	
-	FOR i,1,5
-		LOCATE x,y
-		PRINT i
-		INC y
-		FOR k,3,5
+	IF.EQ test,"hello"
+		FOR i,1,5
 			LOCATE x,y
-			PRINT "   "
-			PRINT k
+			PRINT i
 			INC y
+			FOR k,3,5
+				LOCATE x,y
+				PRINT "   "
+				PRINT k
+				INC y
+			NEXT
 		NEXT
-	NEXT
-	VSYNC
-
+		VSYNC
+	ENDIF
+	
 	EXIT
 
 init_gfx:
