@@ -31,6 +31,7 @@ export class Commands {
             ["ARR.NEW"]: this.ARR_NEW,
             ["ARR.SET"]: this.ARR_SET,
             ["ARR.PUSH"]: this.ARR_PUSH,
+            ["ARR.FOR"]: this.ARR_FOR,
             ["INC"]: this.INC,
             ["DEC"]: this.DEC,
             ["CLS"]: this.CLS,
@@ -157,16 +158,20 @@ export class Commands {
     }
 
     ARR_NEW(ptm: PTM, intp: Interpreter) {
-        const argc = intp.argcMinMax(1, 2);
+        const argc = intp.argcMinMax(1, 3);
         const arrayId = intp.requireId(0);
         let initialArrLen = 0;
         if (argc > 1) {
             initialArrLen = intp.requireNumber(1);
         }
+        let initialElement = "";
+        if (argc > 2) {
+            initialElement = intp.requireString(2);
+        }
         const arr: string[] = [];
         if (initialArrLen > 0) {
             for (let i = 0; i < initialArrLen; i++) {
-                arr.push("");
+                arr.push(initialElement);
             }
         }
         ptm.arrays[arrayId] = arr;
@@ -177,6 +182,14 @@ export class Commands {
         const array = intp.requireExistingArray(0);
         const value = intp.requireString(1);
         array.push(value);
+    }
+
+    ARR_FOR(ptm: PTM, intp: Interpreter) {
+        intp.argc(2)
+        const arrId = intp.requireId(0);
+        const arr = intp.requireExistingArray(0);
+        const iterVarId = intp.requireId(1);
+        ptm.beginArrayLoop(arr, arrId, iterVarId);
     }
 
     ARR_SET(ptm: PTM, intp: Interpreter) {

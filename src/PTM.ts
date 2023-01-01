@@ -200,7 +200,20 @@ export class PTM {
         this.loopStack.push(loop);
     }
 
-    beginArrayLoop() {
+    beginArrayLoop(arr: string[], arrId: string, iterVarId: string) {
+        if (arr.length > 0) {
+            this.vars[iterVarId] = arr[0];
+        }
+        const loop = new Loop();
+        loop.isArray = true;
+        loop.lineIxBegin = this.programPtr + 1;
+        loop.arrayId = arrId;
+        loop.iterationVariable = iterVarId;
+        loop.current = 0;
+        loop.first = 0;
+        loop.last = arr.length - 1;
+        loop.step = 1;
+        this.loopStack.push(loop);
     }
 
     endLoop() {

@@ -805,6 +805,7 @@ class Commands {
             ["ARR.NEW"]: this.ARR_NEW,
             ["ARR.SET"]: this.ARR_SET,
             ["ARR.PUSH"]: this.ARR_PUSH,
+            ["ARR.FOR"]: this.ARR_FOR,
             ["INC"]: this.INC,
             ["DEC"]: this.DEC,
             ["CLS"]: this.CLS,
@@ -921,16 +922,20 @@ class Commands {
         ptm.vars[id] = intp.requireString(1);
     }
     ARR_NEW(ptm, intp) {
-        const argc = intp.argcMinMax(1, 2);
+        const argc = intp.argcMinMax(1, 3);
         const arrayId = intp.requireId(0);
         let initialArrLen = 0;
         if (argc > 1) {
             initialArrLen = intp.requireNumber(1);
         }
+        let initialElement = "";
+        if (argc > 2) {
+            initialElement = intp.requireString(2);
+        }
         const arr = [];
         if (initialArrLen > 0) {
             for (let i = 0; i < initialArrLen; i++) {
-                arr.push("");
+                arr.push(initialElement);
             }
         }
         ptm.arrays[arrayId] = arr;
@@ -940,6 +945,13 @@ class Commands {
         const array = intp.requireExistingArray(0);
         const value = intp.requireString(1);
         array.push(value);
+    }
+    ARR_FOR(ptm, intp) {
+        intp.argc(2);
+        const arrId = intp.requireId(0);
+        const arr = intp.requireExistingArray(0);
+        const iterVarId = intp.requireId(1);
+        ptm.beginArrayLoop(arr, arrId, iterVarId);
     }
     ARR_SET(ptm, intp) {
         intp.argc(2);
@@ -1699,7 +1711,20 @@ class PTM {
         loop.step = step;
         this.loopStack.push(loop);
     }
-    beginArrayLoop() {
+    beginArrayLoop(arr, arrId, iterVarId) {
+        if (arr.length > 0) {
+            this.vars[iterVarId] = arr[0];
+        }
+        const loop = new LoopStack_1.Loop();
+        loop.isArray = true;
+        loop.lineIxBegin = this.programPtr + 1;
+        loop.arrayId = arrId;
+        loop.iterationVariable = iterVarId;
+        loop.current = 0;
+        loop.first = 0;
+        loop.last = arr.length - 1;
+        loop.step = 1;
+        this.loopStack.push(loop);
     }
     endLoop() {
         if (this.loopStack.isEmpty()) {
