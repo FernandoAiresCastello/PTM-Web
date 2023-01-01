@@ -15,17 +15,25 @@ PAL 4,&h0000ff
 PAL 5,&hffff00
 PAL 6,&hff00ff
 
-LOCATE 1,1
+VAR name,"Fernando"
+ARR.NEW arr
+ARR.PUSH arr,"First"
+ARR.PUSH arr,"Second"
 
-PRINTL "Hello World!{lf}{f2}Red{/f},{f3}Green{/f},{f4}Blue{/f}."
+LOCATE 1,1
+VAR ix,0
+
+PRINTL "Hello World!{lf}{f2}Red{/f},{f3}{%arr[ix]}{/f},{f4}{%arr[ix]}{/f}."
+INC ix
+PRINTL "Hello World!{lf}{f2}Red{/f},{f3}{%arr[ix]}{/f},{f4}{%arr[ix]}{/f}."
 PRINTL
 PRINTL "Hello World again!{lf}{f5}{b2}Red{/b},{b3}Green{/b},{b4}Blue{/b}."
 PRINTL
 PRINTL "Hello World, char literal: {f6}{c64}{/f}"
 
-LOCATE 10,10
+LOCATE 10,15
 PRINT "Hello World!"
-LOCATE 10,10
+LOCATE 10,15
 COLOR 0,1
 PRINT.ADD "Hello World!"
 

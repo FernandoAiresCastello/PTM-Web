@@ -2,6 +2,7 @@ import { PTM_RuntimeError } from "../Errors/PTM_RuntimeError";
 import { Cursor } from "../Graphics/Cursor";
 import { TileSeq } from "../Graphics/TileSeq";
 import { PTM } from "../PTM";
+import { Interpreter } from "./Interpreter";
 
 class TextColor {
 
@@ -16,6 +17,12 @@ class TextColor {
         this.fgPrev = fg;
         this.bgPrev = bg;
     }
+}
+
+class ResolvedEscapeSeq {
+
+    varValue: string | null = null;
+    tileIndex: number | null = null;
 }
 
 export class FmtStringPrinter {
@@ -42,6 +49,9 @@ export class FmtStringPrinter {
         const chEscapeEnd = "}";
         let escaped = false;
         let escapeSeq = "";
+        
+        let isVariable = false;
+        let resolvedVariableValue = "";
 
         for (let i = 0; i < fmt.length; i++) {
             let tileIndex = fmt.charCodeAt(i);
@@ -61,10 +71,15 @@ export class FmtStringPrinter {
                     return;
                 }
                 escaped = false;
-                const ch = this.interpretEscapeSequence(escapeSeq, csr, initX, textColor);
+                const res = this.interpretEscapeSequence(escapeSeq, csr, initX, textColor);
                 escapeSeq = "";
-                if (ch) {
-                    tileIndex = ch;
+                if (res) {
+                    if (res.tileIndex) {
+                        tileIndex = res.tileIndex;
+                    } else if (res.varValue) {
+                        isVariable = true;
+                        resolvedVariableValue = res.varValue;
+                    }
                 } else {
                     continue;
                 }
@@ -74,40 +89,103 @@ export class FmtStringPrinter {
                 continue;
             }
 
-            tile.set(0, tileIndex, textColor.fg, textColor.bg);
-            buf.setTile(tile, layer, csr.x, csr.y);
-            csr.x++;
+            if (isVariable) {
+                isVariable = false;
+                for (let i = 0; i < resolvedVariableValue.length; i++) {
+                    tile.set(0, resolvedVariableValue.charCodeAt(i), textColor.fg, textColor.bg);
+                    buf.setTile(tile, layer, csr.x, csr.y);
+                    csr.x++;
+                }
+            } else {
+                tile.set(0, tileIndex, textColor.fg, textColor.bg);
+                buf.setTile(tile, layer, csr.x, csr.y);
+                csr.x++;
+            }
         }
     }
 
-    private interpretEscapeSequence(esc: string, csr: Cursor, initX: number, textColor: TextColor): number | null {
-        const src = esc;
-        esc = esc.toUpperCase();
+    private interpretEscapeSequence(esc: string, csr: Cursor, initX: number, textColor: TextColor): ResolvedEscapeSeq | null {
 
-        if (esc === "LF") {
+        if (esc.toUpperCase() === "LF") {
             csr.y++;
             csr.x = initX;
+            return null;
 
-        } else if (esc[0] === "F") {
+        } else if (esc[0].toUpperCase() === "F") {
             textColor.fgPrev = textColor.fg;
             textColor.fg = Number(esc.substring(1).trim());
+            return null;
 
-        } else if (esc === "/F") {
+        } else if (esc.toUpperCase() === "/F") {
             textColor.fg = textColor.fgPrev;
+            return null;
 
-        } else if (esc[0] === "B") {
+        } else if (esc[0].toUpperCase() === "B") {
             textColor.bgPrev = textColor.bg;
             textColor.bg = Number(esc.substring(1).trim());
+            return null;
 
-        } else if (esc === "/B") {
+        } else if (esc.toUpperCase() === "/B") {
             textColor.bg = textColor.bgPrev;
+            return null;
 
-        } else if (esc[0] === "C") {
-            return Number(esc.substring(1).trim());
+        } else if (esc[0].toUpperCase() === "C") {
+            const res = new ResolvedEscapeSeq();
+            res.tileIndex = Number(esc.substring(1).trim());
+            return res;
 
+        } else if (esc[0] === "%") {
+            const varId = esc.substring(1);
+            if (varId.indexOf("[") > 0 && varId.indexOf("]") > 0) { // Array element
+                const open = varId.indexOf("[");
+                const close = varId.indexOf("]");
+                const arrId = varId.substring(0, open);
+                const arrIndex = varId.substring(open + 1, close);
+                
+                const arr = this.ptm.arrays[arrId];
+                if (arr === undefined) {
+                    throw new PTM_RuntimeError(`Array not found: ${arrId}`, this.ptm.currentLine!);
+                }
+
+                let value = "";
+                if (Interpreter.isValidIdentifier(arrIndex)) {
+                    const ixStr = this.ptm.vars[arrIndex];
+                    if (ixStr === undefined) {
+                        throw new PTM_RuntimeError(`Variable used as array index not found: ${arrId}[${arrIndex}]`, this.ptm.currentLine!);
+                    }
+                    const ix = Number(ixStr);
+                    if (Number.isNaN(ix)) {
+                        throw new PTM_RuntimeError(`Invalid array subscript: ${ixStr}`, this.ptm.currentLine!);
+                    }
+                    if (ix < 0 || ix >= arr.length) {
+                        throw new PTM_RuntimeError(`Index out of bounds for array ${arrId}: ${ix}`, this.ptm.currentLine!);
+                    }
+                    value = arr[ix];
+
+                } else {
+                    const ix = Number(arrIndex);
+                    if (ix < 0 || ix >= arr.length) {
+                        throw new PTM_RuntimeError(`Index out of bounds for array ${arrId}: ${ix}`, this.ptm.currentLine!);
+                    }
+                    value = arr[ix];
+                }
+
+                const res = new ResolvedEscapeSeq();
+                res.varValue = value;
+                return res;
+
+            } else { // Simple variable
+                const value = this.ptm.vars[varId];
+                if (value === undefined) {
+                    throw new PTM_RuntimeError(`Variable not found: ${varId}`, this.ptm.currentLine!);
+                }
+                const res = new ResolvedEscapeSeq();
+                res.varValue = value;
+                return res;
+            }
+        
         } else {
-            throw new PTM_RuntimeError(`Unrecognized escape sequence: ${src}`, this.ptm.currentLine!);
+            throw new PTM_RuntimeError(`Unrecognized escape sequence: ${esc}`, this.ptm.currentLine!);
         }
-        return null;
     }
 }
