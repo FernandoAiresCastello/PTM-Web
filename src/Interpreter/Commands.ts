@@ -52,7 +52,8 @@ export class Commands {
             ["TROFF"]: this.TROFF,
             ["PRINT"]: this.PRINT,
             ["PRINTL"]: this.PRINTL,
-            ["PRINTR"]: this.PRINTR,
+            ["PRINT.RAW"]: this.PRINT_RAW,
+            ["PRINTL.RAW"]: this.PRINTL_RAW,
             ["PRINT.ADD"]: this.PRINT_ADD,
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
@@ -366,7 +367,7 @@ export class Commands {
         ptm.printFmtTileStringAtCursorPos(text + "{LF}");
     }
 
-    PRINTR(ptm: PTM, intp: Interpreter) {
+    PRINT_RAW(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         const text = intp.requireString(0);
         ptm.printRawTileStringAtCursorPos(text);
@@ -381,6 +382,12 @@ export class Commands {
                 ptm.currentTextFgc, ptm.currentTextBgc, ptm.currentTile.transparent);
             ptm.cursor.x += text.length;
         }
+    }
+
+    PRINTL_RAW(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const text = intp.requireString(0);
+        ptm.printRawTileStringAtCursorPos(text + "\n");
     }
 
     FCOL(ptm: PTM, intp: Interpreter) {

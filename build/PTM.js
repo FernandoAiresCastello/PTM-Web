@@ -826,7 +826,8 @@ class Commands {
             ["TROFF"]: this.TROFF,
             ["PRINT"]: this.PRINT,
             ["PRINTL"]: this.PRINTL,
-            ["PRINTR"]: this.PRINTR,
+            ["PRINT.RAW"]: this.PRINT_RAW,
+            ["PRINTL.RAW"]: this.PRINTL_RAW,
             ["PRINT.ADD"]: this.PRINT_ADD,
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
@@ -1106,7 +1107,7 @@ class Commands {
         const text = argc > 0 ? intp.requireString(0) : "";
         ptm.printFmtTileStringAtCursorPos(text + "{LF}");
     }
-    PRINTR(ptm, intp) {
+    PRINT_RAW(ptm, intp) {
         intp.argc(1);
         const text = intp.requireString(0);
         ptm.printRawTileStringAtCursorPos(text);
@@ -1118,6 +1119,11 @@ class Commands {
             ptm.cursor.buffer.overlapTileString(text, ptm.cursor.layer, ptm.cursor.x, ptm.cursor.y, ptm.currentTextFgc, ptm.currentTextBgc, ptm.currentTile.transparent);
             ptm.cursor.x += text.length;
         }
+    }
+    PRINTL_RAW(ptm, intp) {
+        intp.argc(1);
+        const text = intp.requireString(0);
+        ptm.printRawTileStringAtCursorPos(text + "\n");
     }
     FCOL(ptm, intp) {
         intp.argc(1);
