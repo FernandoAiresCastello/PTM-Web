@@ -20,6 +20,7 @@ import { DefaultPalette } from "./Graphics/DefaultPalette";
 import { Comparison } from "./Interpreter/Comparison";
 import { ProgramLineType } from "./Parser/ProgramLineType";
 import { IfStack } from "./Interpreter/IfStack";
+import { FmtStringPrinter } from "./Interpreter/FmtStringPrinter";
 
 document.addEventListener("DOMContentLoaded", PTM_Main);
 
@@ -46,11 +47,12 @@ export class PTM {
     private readonly cycleExecHandle: number;
     private programPtr: number;
     private branching: boolean;
-    private currentLine: ProgramLine | null;
+    currentLine: ProgramLine | null;
     private pauseCycles: number;
     private callStack: CallStack;
     private loopStack: LoopStack;
     private ifStack: IfStack;
+    private stringFmt: FmtStringPrinter;
 
     constructor(displayElement: HTMLElement, srcPtml: string) {
         // Initialize objects
@@ -76,6 +78,7 @@ export class PTM {
         this.currentTile = new TileSeq();
         this.currentTextFgc = 1;
         this.currentTextBgc = 0;
+        this.stringFmt = new FmtStringPrinter(this);
         // Configure defaults
         DefaultPalette.init(this.palette);
         DefaultTileset.init(this.tileset);
@@ -178,7 +181,16 @@ export class PTM {
         this.pauseCycles = cycles;
     }
 
-    printTileStringAtCursorPos(str: string) {
+    printFmtTileStringAtCursorPos(fmt: string) {
+        if (this.cursor && this.display) {
+            this.stringFmt.print(fmt, this.cursor, this.currentTextFgc, this.currentTextBgc, this.currentTile.transparent);
+            if (this.stringFmt.error) {
+                throw new PTM_RuntimeError(`${this.stringFmt.error}: ${fmt}`, this.currentLine!);
+            }
+        }
+    }
+
+    printRawTileStringAtCursorPos(str: string) {
         if (this.cursor && this.display) {
             this.cursor.buffer.setTileString(str, this.cursor, this.currentTextFgc, this.currentTextBgc, this.currentTile.transparent);
         }

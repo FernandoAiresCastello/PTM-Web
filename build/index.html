@@ -9,19 +9,19 @@
 
 SCREEN 256,192,2,4,4
 
-WCOL 1
-COLOR 0
-TRON
+PAL 2,&hff0000
+PAL 3,&h00ff00
+PAL 4,&h0000ff
+PAL 5,&hffff00
+PAL 6,&hff00ff
 
-ARR.NEW arr
-ARR.PUSH arr,"First"
-ARR.PUSH arr,"Second"
-ARR.PUSH arr,"Last"
-ARR.FOR arr,element
-	PRINTL element
-NEXT
+LOCATE 1,1
 
-EXIT
+PRINTL "Hello World!{lf}{f2}Red{/f},{f3}Green{/f},{f4}Blue{/f}."
+PRINTL
+PRINTL "Hello World again!{lf}{f5}{b2}Red{/b},{b3}Green{/b},{b4}Blue{/b}."
+PRINTL
+PRINTL "Hello World, char literal: {f6}{c64}{/f}"
 
 </script>
 </body>

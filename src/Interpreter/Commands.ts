@@ -52,6 +52,7 @@ export class Commands {
             ["TROFF"]: this.TROFF,
             ["PRINT"]: this.PRINT,
             ["PRINTL"]: this.PRINTL,
+            ["PRINTR"]: this.PRINTR,
             ["PRINT.ADD"]: this.PRINT_ADD,
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
@@ -356,13 +357,19 @@ export class Commands {
     PRINT(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         const text = intp.requireString(0);
-        ptm.printTileStringAtCursorPos(text);
+        ptm.printFmtTileStringAtCursorPos(text);
     }
 
     PRINTL(ptm: PTM, intp: Interpreter) {
+        const argc = intp.argcMinMax(0, 1);
+        const text = argc > 0 ? intp.requireString(0) : "";
+        ptm.printFmtTileStringAtCursorPos(text + "{LF}");
+    }
+
+    PRINTR(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         const text = intp.requireString(0);
-        ptm.printTileStringAtCursorPos(text + "\n");
+        ptm.printRawTileStringAtCursorPos(text);
     }
 
     PRINT_ADD(ptm: PTM, intp: Interpreter) {

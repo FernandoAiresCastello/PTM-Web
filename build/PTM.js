@@ -826,6 +826,7 @@ class Commands {
             ["TROFF"]: this.TROFF,
             ["PRINT"]: this.PRINT,
             ["PRINTL"]: this.PRINTL,
+            ["PRINTR"]: this.PRINTR,
             ["PRINT.ADD"]: this.PRINT_ADD,
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
@@ -1098,12 +1099,17 @@ class Commands {
     PRINT(ptm, intp) {
         intp.argc(1);
         const text = intp.requireString(0);
-        ptm.printTileStringAtCursorPos(text);
+        ptm.printFmtTileStringAtCursorPos(text);
     }
     PRINTL(ptm, intp) {
+        const argc = intp.argcMinMax(0, 1);
+        const text = argc > 0 ? intp.requireString(0) : "";
+        ptm.printFmtTileStringAtCursorPos(text + "{LF}");
+    }
+    PRINTR(ptm, intp) {
         intp.argc(1);
         const text = intp.requireString(0);
-        ptm.printTileStringAtCursorPos(text + "\n");
+        ptm.printRawTileStringAtCursorPos(text);
     }
     PRINT_ADD(ptm, intp) {
         intp.argc(1);
@@ -1216,6 +1222,108 @@ var Comparison;
 },{}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.FmtStringPrinter = void 0;
+const PTM_RuntimeError_1 = require("../Errors/PTM_RuntimeError");
+const TileSeq_1 = require("../Graphics/TileSeq");
+class TextColor {
+    constructor(fg, bg) {
+        this.fg = 0;
+        this.bg = 0;
+        this.fgPrev = 0;
+        this.bgPrev = 0;
+        this.fg = fg;
+        this.bg = bg;
+        this.fgPrev = fg;
+        this.bgPrev = bg;
+    }
+}
+class FmtStringPrinter {
+    constructor(ptm) {
+        this.ptm = ptm;
+        this.error = null;
+    }
+    print(fmt, csr, initFgc, initBgc, transp) {
+        const buf = csr.buffer;
+        const layer = csr.layer;
+        const initX = csr.x;
+        let tile = new TileSeq_1.TileSeq();
+        tile.transparent = transp;
+        tile.setSingle(0, 0, 0);
+        let textColor = new TextColor(initFgc, initBgc);
+        const chEscapeBegin = "{";
+        const chEscapeEnd = "}";
+        let escaped = false;
+        let escapeSeq = "";
+        for (let i = 0; i < fmt.length; i++) {
+            let tileIndex = fmt.charCodeAt(i);
+            const ch = fmt.charAt(i);
+            if (ch === chEscapeBegin) {
+                if (escaped) {
+                    this.error = "Escape sequences cannot be nested";
+                    return;
+                }
+                escaped = true;
+                continue;
+            }
+            else if (ch === chEscapeEnd) {
+                if (!escaped) {
+                    this.error = "Missing opening escape character";
+                    return;
+                }
+                escaped = false;
+                const ch = this.interpretEscapeSequence(escapeSeq, csr, initX, textColor);
+                escapeSeq = "";
+                if (ch) {
+                    tileIndex = ch;
+                }
+                else {
+                    continue;
+                }
+            }
+            else if (escaped) {
+                escapeSeq += ch;
+                continue;
+            }
+            tile.set(0, tileIndex, textColor.fg, textColor.bg);
+            buf.setTile(tile, layer, csr.x, csr.y);
+            csr.x++;
+        }
+    }
+    interpretEscapeSequence(esc, csr, initX, textColor) {
+        const src = esc;
+        esc = esc.toUpperCase();
+        if (esc === "LF") {
+            csr.y++;
+            csr.x = initX;
+        }
+        else if (esc[0] === "F") {
+            textColor.fgPrev = textColor.fg;
+            textColor.fg = Number(esc.substring(1).trim());
+        }
+        else if (esc === "/F") {
+            textColor.fg = textColor.fgPrev;
+        }
+        else if (esc[0] === "B") {
+            textColor.bgPrev = textColor.bg;
+            textColor.bg = Number(esc.substring(1).trim());
+        }
+        else if (esc === "/B") {
+            textColor.bg = textColor.bgPrev;
+        }
+        else if (esc[0] === "C") {
+            return Number(esc.substring(1).trim());
+        }
+        else {
+            throw new PTM_RuntimeError_1.PTM_RuntimeError(`Unrecognized escape sequence: ${src}`, this.ptm.currentLine);
+        }
+        return null;
+    }
+}
+exports.FmtStringPrinter = FmtStringPrinter;
+
+},{"../Errors/PTM_RuntimeError":3,"../Graphics/TileSeq":15}],22:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.IfStack = void 0;
 class IfStack {
     constructor() {
@@ -1236,7 +1344,7 @@ class IfStack {
 }
 exports.IfStack = IfStack;
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Interpreter = void 0;
@@ -1255,7 +1363,7 @@ class Interpreter {
     }
     argc(expectedArgc) {
         const actualArgc = this.programLine.params.length;
-        if (actualArgc && actualArgc !== expectedArgc) {
+        if (actualArgc !== expectedArgc) {
             throw new PTM_RuntimeError_1.PTM_RuntimeError(`Invalid parameter count. Expected ${expectedArgc}, got ${actualArgc}`, this.programLine);
         }
     }
@@ -1461,7 +1569,7 @@ class Interpreter {
 }
 exports.Interpreter = Interpreter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":29}],23:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":30}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Logger = void 0;
@@ -1499,7 +1607,7 @@ class Logger {
 }
 exports.Logger = Logger;
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoopStack = exports.Loop = void 0;
@@ -1544,7 +1652,7 @@ class LoopStack {
 }
 exports.LoopStack = LoopStack;
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
@@ -1566,6 +1674,7 @@ const DefaultPalette_1 = require("./Graphics/DefaultPalette");
 const Comparison_1 = require("./Interpreter/Comparison");
 const ProgramLineType_1 = require("./Parser/ProgramLineType");
 const IfStack_1 = require("./Interpreter/IfStack");
+const FmtStringPrinter_1 = require("./Interpreter/FmtStringPrinter");
 document.addEventListener("DOMContentLoaded", main_1.PTM_Main);
 class PTM {
     constructor(displayElement, srcPtml) {
@@ -1594,6 +1703,7 @@ class PTM {
         this.currentTile = new TileSeq_1.TileSeq();
         this.currentTextFgc = 1;
         this.currentTextBgc = 0;
+        this.stringFmt = new FmtStringPrinter_1.FmtStringPrinter(this);
         // Configure defaults
         DefaultPalette_1.DefaultPalette.init(this.palette);
         DefaultTileset_1.DefaultTileset.init(this.tileset);
@@ -1691,7 +1801,15 @@ class PTM {
     pause(cycles) {
         this.pauseCycles = cycles;
     }
-    printTileStringAtCursorPos(str) {
+    printFmtTileStringAtCursorPos(fmt) {
+        if (this.cursor && this.display) {
+            this.stringFmt.print(fmt, this.cursor, this.currentTextFgc, this.currentTextBgc, this.currentTile.transparent);
+            if (this.stringFmt.error) {
+                throw new PTM_RuntimeError_1.PTM_RuntimeError(`${this.stringFmt.error}: ${fmt}`, this.currentLine);
+            }
+        }
+    }
+    printRawTileStringAtCursorPos(str) {
         if (this.cursor && this.display) {
             this.cursor.buffer.setTileString(str, this.cursor, this.currentTextFgc, this.currentTextBgc, this.currentTile.transparent);
         }
@@ -1869,7 +1987,7 @@ class PTM {
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultPalette":6,"./Graphics/DefaultTileset":7,"./Graphics/Display":8,"./Graphics/Palette":10,"./Graphics/TileSeq":15,"./Graphics/Tileset":16,"./Interpreter/CallStack":18,"./Interpreter/Commands":19,"./Interpreter/Comparison":20,"./Interpreter/IfStack":21,"./Interpreter/Interpreter":22,"./Interpreter/Logger":23,"./Interpreter/LoopStack":24,"./Parser/Parser":30,"./Parser/ProgramLineType":33,"./main":34}],26:[function(require,module,exports){
+},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultPalette":6,"./Graphics/DefaultTileset":7,"./Graphics/Display":8,"./Graphics/Palette":10,"./Graphics/TileSeq":15,"./Graphics/Tileset":16,"./Interpreter/CallStack":18,"./Interpreter/Commands":19,"./Interpreter/Comparison":20,"./Interpreter/FmtStringPrinter":21,"./Interpreter/IfStack":22,"./Interpreter/Interpreter":23,"./Interpreter/Logger":24,"./Interpreter/LoopStack":25,"./Parser/Parser":31,"./Parser/ProgramLineType":34,"./main":35}],27:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -1880,7 +1998,7 @@ var ExecutionTime;
     ExecutionTime["RunTime"] = "RunTime";
 })(ExecutionTime = exports.ExecutionTime || (exports.ExecutionTime = {}));
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NumberBase = void 0;
@@ -1892,7 +2010,7 @@ var NumberBase;
     NumberBase["Binary"] = "Binary";
 })(NumberBase = exports.NumberBase || (exports.NumberBase = {}));
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
@@ -2031,7 +2149,7 @@ Param.BinPrefix = "&B";
 Param.ArrayLeftBrace = "[";
 Param.ArrayRightBrace = "]";
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":22,"./NumberBase":27,"./ParamType":29}],29:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":23,"./NumberBase":28,"./ParamType":30}],30:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
@@ -2045,7 +2163,7 @@ var ParamType;
     ParamType["ArrayIxVarIdentifier"] = "ArrayIxVarIdentifier";
 })(ParamType = exports.ParamType || (exports.ParamType = {}));
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
@@ -2200,7 +2318,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"./ExecutionTime":26,"./Param":28,"./Program":31,"./ProgramLine":32,"./ProgramLineType":33}],31:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"./ExecutionTime":27,"./Param":29,"./Program":32,"./ProgramLine":33,"./ProgramLineType":34}],32:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;
@@ -2221,7 +2339,7 @@ class Program {
 }
 exports.Program = Program;
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLine = void 0;
@@ -2242,7 +2360,7 @@ class ProgramLine {
 }
 exports.ProgramLine = ProgramLine;
 
-},{"./ExecutionTime":26,"./ProgramLineType":33}],33:[function(require,module,exports){
+},{"./ExecutionTime":27,"./ProgramLineType":34}],34:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLineType = void 0;
@@ -2257,7 +2375,7 @@ var ProgramLineType;
     ProgramLineType["EndFor"] = "EndFor";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM_Main = void 0;
@@ -2306,4 +2424,4 @@ function PTM_Main() {
 }
 exports.PTM_Main = PTM_Main;
 
-},{"./Errors/PTM_InitializationError":1,"./PTM":25}]},{},[25]);
+},{"./Errors/PTM_InitializationError":1,"./PTM":26}]},{},[26]);

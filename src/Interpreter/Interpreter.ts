@@ -27,7 +27,7 @@ export class Interpreter {
 
     argc(expectedArgc: number) {
         const actualArgc = this.programLine.params.length;
-        if (actualArgc && actualArgc !== expectedArgc) {
+        if (actualArgc !== expectedArgc) {
             throw new PTM_RuntimeError(`Invalid parameter count. Expected ${expectedArgc}, got ${actualArgc}`, this.programLine);
         }
     }
