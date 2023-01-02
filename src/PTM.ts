@@ -21,6 +21,7 @@ import { Comparison } from "./Interpreter/Comparison";
 import { ProgramLineType } from "./Parser/ProgramLineType";
 import { IfStack } from "./Interpreter/IfStack";
 import { FmtStringPrinter } from "./Interpreter/FmtStringPrinter";
+import { KeyboardInput } from "./Input/KeyboardInput";
 
 document.addEventListener("DOMContentLoaded", PTM_Main);
 
@@ -35,16 +36,18 @@ export class PTM {
     currentTile: TileSeq;
     currentTextFgc: number;
     currentTextBgc: number;
+    cycleCounter: number;
     readonly log: Logger;
     readonly displayElement: HTMLElement;
     readonly commands: Commands;
     readonly intp: Interpreter;
-    
-    private readonly cycleInterval: number = 1;
+    readonly keyboard: KeyboardInput;
+
     private readonly animationInterval: number = 400;
     private readonly parser: Parser;
     private readonly program: Program;
     private readonly cycleExecHandle: number;
+    private stopRequested: boolean;
     private programPtr: number;
     private branching: boolean;
     currentLine: ProgramLine | null;
@@ -59,6 +62,8 @@ export class PTM {
         this.displayElement = displayElement;
         this.display = null;
         this.log = new Logger();
+        this.stopRequested = false;
+        this.cycleCounter = 0;
         this.parser = new Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter(this, this.program);
@@ -79,6 +84,7 @@ export class PTM {
         this.currentTextFgc = 1;
         this.currentTextBgc = 0;
         this.stringFmt = new FmtStringPrinter(this);
+        this.keyboard = new KeyboardInput(this);
         // Configure defaults
         DefaultPalette.init(this.palette);
         DefaultTileset.init(this.tileset);
@@ -87,8 +93,8 @@ export class PTM {
     }
 
     start(): number {
-        this.log.info("Interpreter started");
-        return window.setInterval(() => this.cycle(), this.cycleInterval);
+        this.log.info("Machine running...");
+        return window.requestAnimationFrame(() => this.cycle());
     }
 
     cycle() {
@@ -112,19 +118,40 @@ export class PTM {
                 }
             }
         }
+        this.cycleCounter++;
+        if (this.cycleCounter >= Number.MAX_SAFE_INTEGER) {
+            this.cycleCounter = 0;
+        }
+        if (!this.stopRequested) {
+            window.requestAnimationFrame(() => this.cycle());
+        }
     }
 
     stop(reason?: string) {
-        window.clearInterval(this.cycleExecHandle);
-        let msg = "Interpreter exited";
+        this.stopRequested = true;
+        window.cancelAnimationFrame(this.cycleExecHandle);
+        this.keepVsyncAfterStopping();
+
+        let msg = "Machine stopped\nReason: ";
         if (reason) {
-            msg += `\nReason: ${reason}`;
+            msg += reason;
+        } else {
+            msg += "Manual stop request";
         }
         console.log(msg);
     }
 
+    keepVsyncAfterStopping() {
+        if (this.display) {
+            this.display.update();
+        }
+        window.requestAnimationFrame(() => this.keepVsyncAfterStopping());
+    }
+
     reset() {
         this.log.info("Machine reset");
+        this.stopRequested = false;
+        this.cycleCounter = 0;
         this.programPtr = 0;
         this.branching = true;
         this.display?.reset();
@@ -175,6 +202,10 @@ export class PTM {
         } else {
             throw new PTM_RuntimeError("Call stack is empty", this.currentLine!);
         }
+    }
+
+    setVar(id: string, value: any) {
+        this.vars[id] = value.toString();
     }
 
     pause(cycles: number) {
@@ -298,19 +329,19 @@ export class PTM {
             if (a != b) { return; } else { this.gotoMatchingEndIf(); }
             
         } else {
-            const aNumeric = Number(a);
-            if (Number.isNaN(aNumeric)) return;
-            const bNumeric = Number(b);
-            if (Number.isNaN(bNumeric)) return;
+            const numA = Number(a);
+            if (Number.isNaN(numA)) return;
+            const numB = Number(b);
+            if (Number.isNaN(numB)) return;
 
             if (cmp === Comparison.Greater) {
-                if (a > b) { return; } else { this.gotoMatchingEndIf(); }
+                if (numA > numB) { return; } else { this.gotoMatchingEndIf(); }
             } else if (cmp === Comparison.GreaterOrEqual) {
-                if (a >= b) { return; } else { this.gotoMatchingEndIf(); }
+                if (numA >= numB) { return; } else { this.gotoMatchingEndIf(); }
             } else if (cmp === Comparison.Lesser) {
-                if (a < b) { return; } else { this.gotoMatchingEndIf(); }
+                if (numA < numB) { return; } else { this.gotoMatchingEndIf(); }
             } else if (cmp === Comparison.LesserOrEqual) {
-                if (a <= b) { return; } else { this.gotoMatchingEndIf(); }
+                if (numA <= numB) { return; } else { this.gotoMatchingEndIf(); }
             }
         }
     }

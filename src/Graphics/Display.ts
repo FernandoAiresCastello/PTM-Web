@@ -87,7 +87,6 @@ export class Display {
         if (display.animationFrameIndex >= Number.MAX_SAFE_INTEGER) {
             display.animationFrameIndex = 0;
         }
-        display.update();
     }
 
     drawTileFrame(tile: Tile, x: number, y: number, transparent: boolean) {

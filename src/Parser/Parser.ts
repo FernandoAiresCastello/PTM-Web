@@ -47,8 +47,13 @@ export class Parser {
                 }
 
             } else if (newPrgLine.type === ProgramLineType.Label) {
-                const label = newPrgLine.src;
-                this.program.addLabel(label, actualLineIndex);
+                const newLabel = newPrgLine.src;
+                for (let existingLabel in this.program.labels) {
+                    if (newLabel === existingLabel) {
+                        throw new PTM_ParseError(`Duplicate label: ${newLabel}`, newPrgLine);
+                    }
+                }
+                this.program.addLabel(newLabel, actualLineIndex);
 
             } else if (newPrgLine.type === ProgramLineType.Undefined) {
                 throw new PTM_ParseError("Could not determine type of this line", newPrgLine);

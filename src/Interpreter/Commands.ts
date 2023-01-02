@@ -52,8 +52,8 @@ export class Commands {
             ["TROFF"]: this.TROFF,
             ["PRINT"]: this.PRINT,
             ["PRINTL"]: this.PRINTL,
-            ["PRINT.RAW"]: this.PRINT_RAW,
-            ["PRINTL.RAW"]: this.PRINTL_RAW,
+            ["RPRINT"]: this.RPRINT,
+            ["RPRINTL"]: this.RPRINTL,
             ["PRINT.ADD"]: this.PRINT_ADD,
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
@@ -69,7 +69,9 @@ export class Commands {
             ["IF.GTE"]: this.IF_GTE,
             ["IF.LT"]: this.IF_LT,
             ["IF.LTE"]: this.IF_LTE,
-            ["ENDIF"]: this.ENDIF
+            ["ENDIF"]: this.ENDIF,
+            ["INKEY"]: this.INKEY,
+            ["CYCLES"]: this.CYCLES
         };
     }
 
@@ -110,7 +112,7 @@ export class Commands {
 
     EXIT(ptm: PTM, intp: Interpreter) {
         intp.argc(0);
-        ptm.stop("Exit requested");
+        ptm.stop("EXIT command");
         if (ptm.display) {
             ptm.display.update();
         }
@@ -156,7 +158,7 @@ export class Commands {
     VAR(ptm: PTM, intp: Interpreter) {
         intp.argc(2);
         const id = intp.requireId(0);
-        ptm.vars[id] = intp.requireString(1);
+        ptm.setVar(id, intp.requireString(1));
     }
 
     ARR_NEW(ptm: PTM, intp: Interpreter) {
@@ -208,14 +210,14 @@ export class Commands {
         intp.argc(1);
         const varId = intp.requireExistingVariable(0);
         const value = intp.requireNumber(0);
-        ptm.vars[varId] = (value + 1).toString();
+        ptm.setVar(varId, value + 1);
     }    
 
     DEC(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         const varId = intp.requireExistingVariable(0);
         const value = intp.requireNumber(0);
-        ptm.vars[varId] = (value - 1).toString();
+        ptm.setVar(varId, value - 1);
     }    
 
     PAL(ptm: PTM, intp: Interpreter) {
@@ -237,6 +239,10 @@ export class Commands {
         intp.argc(0);
         if (ptm.display) {
             ptm.display.clearAllBuffers();
+            if (ptm.cursor) {
+                ptm.cursor.layer = 0;
+                ptm.cursor.setPos(0, 0);
+            }
         }
     }
 
@@ -367,7 +373,7 @@ export class Commands {
         ptm.printFmtTileStringAtCursorPos(text + "{LF}");
     }
 
-    PRINT_RAW(ptm: PTM, intp: Interpreter) {
+    RPRINT(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         const text = intp.requireString(0);
         ptm.printRawTileStringAtCursorPos(text);
@@ -384,7 +390,7 @@ export class Commands {
         }
     }
 
-    PRINTL_RAW(ptm: PTM, intp: Interpreter) {
+    RPRINTL(ptm: PTM, intp: Interpreter) {
         intp.argc(1);
         const text = intp.requireString(0);
         ptm.printRawTileStringAtCursorPos(text + "\n");
@@ -486,5 +492,18 @@ export class Commands {
 
     ENDIF(ptm: PTM, intp: Interpreter) {
         intp.argc(0);
+    }
+
+    INKEY(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const varId = intp.requireId(0);
+        const key = ptm.keyboard.getKey();
+        ptm.setVar(varId, key);
+    }
+
+    CYCLES(ptm: PTM, intp: Interpreter) {
+        intp.argc(1);
+        const varId = intp.requireId(0);
+        ptm.setVar(varId, ptm.cycleCounter);
     }
 }

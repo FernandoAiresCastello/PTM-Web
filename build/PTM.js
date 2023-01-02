@@ -269,7 +269,6 @@ class Display {
         if (display.animationFrameIndex >= Number.MAX_SAFE_INTEGER) {
             display.animationFrameIndex = 0;
         }
-        display.update();
     }
     drawTileFrame(tile, x, y, transparent) {
         this.base.drawTileFrame(tile, x, y, transparent);
@@ -760,6 +759,275 @@ exports.Viewport = Viewport;
 },{}],18:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.KeyboardInput = void 0;
+class KeyboardInput {
+    constructor(ptm) {
+        this.ptm = ptm;
+        this.buffer = [];
+        this.lastKey = "NONE";
+        window.addEventListener("keydown", (e) => {
+            this.onKeyDown(e);
+        });
+    }
+    clearBuffer() {
+        this.buffer = [];
+    }
+    clearLastKey() {
+        this.lastKey = "NONE";
+    }
+    hasKey(key) {
+        return this.buffer.includes(key.toUpperCase());
+    }
+    hasAnyKey() {
+        return this.buffer.length > 0;
+    }
+    getKey() {
+        let key = this.buffer.pop();
+        if (key === undefined)
+            key = "NONE";
+        return key;
+    }
+    getLastKeyPressed() {
+        const key = this.lastKey;
+        this.clearLastKey();
+        return key;
+    }
+    onKeyDown(e) {
+        let key = "";
+        if (e.ctrlKey)
+            key += "CTRL+";
+        if (e.shiftKey)
+            key += "SHIFT+";
+        if (e.altKey)
+            key += "ALT+";
+        switch (e.key) {
+            case " ":
+                key += "SPACE";
+                break;
+            case "ArrowRight":
+                key += "RIGHT";
+                break;
+            case "ArrowLeft":
+                key += "LEFT";
+                break;
+            case "ArrowUp":
+                key += "UP";
+                break;
+            case "ArrowDown":
+                key += "DOWN";
+                break;
+            case "End":
+                key += "END";
+                break;
+            case "Home":
+                key += "HOME";
+                break;
+            case "PageDown":
+                key += "PGDN";
+                break;
+            case "PageUp":
+                key += "PGUP";
+                break;
+            case "Enter":
+                key += "ENTER";
+                break;
+            case "Insert":
+                key += "INS";
+                break;
+            case "Delete":
+                key += "DEL";
+                break;
+            case "Backspace":
+                key += "BS";
+                break;
+            case "Escape":
+                key += "ESC";
+                break;
+            case "Tab":
+                key += "TAB";
+                break;
+            case "A":
+            case "a":
+                key += "A";
+                break;
+            case "B":
+            case "b":
+                key += "B";
+                break;
+            case "C":
+            case "c":
+                key += "C";
+                break;
+            case "D":
+            case "d":
+                key += "D";
+                break;
+            case "E":
+            case "e":
+                key += "E";
+                break;
+            case "F":
+            case "f":
+                key += "F";
+                break;
+            case "G":
+            case "g":
+                key += "G";
+                break;
+            case "H":
+            case "h":
+                key += "H";
+                break;
+            case "I":
+            case "i":
+                key += "I";
+                break;
+            case "J":
+            case "j":
+                key += "J";
+                break;
+            case "K":
+            case "k":
+                key += "K";
+                break;
+            case "L":
+            case "l":
+                key += "L";
+                break;
+            case "M":
+            case "m":
+                key += "M";
+                break;
+            case "N":
+            case "n":
+                key += "N";
+                break;
+            case "O":
+            case "o":
+                key += "O";
+                break;
+            case "P":
+            case "p":
+                key += "P";
+                break;
+            case "Q":
+            case "q":
+                key += "Q";
+                break;
+            case "R":
+            case "r":
+                key += "R";
+                break;
+            case "S":
+            case "s":
+                key += "S";
+                break;
+            case "T":
+            case "t":
+                key += "T";
+                break;
+            case "U":
+            case "u":
+                key += "U";
+                break;
+            case "V":
+            case "v":
+                key += "V";
+                break;
+            case "W":
+            case "w":
+                key += "W";
+                break;
+            case "X":
+            case "x":
+                key += "X";
+                break;
+            case "Y":
+            case "y":
+                key += "Y";
+                break;
+            case "Z":
+            case "z":
+                key += "Z";
+                break;
+            case "Ç":
+            case "ç":
+                key += "Ç";
+                break;
+            case "0":
+                key += "0";
+                break;
+            case "1":
+                key += "1";
+                break;
+            case "2":
+                key += "2";
+                break;
+            case "3":
+                key += "3";
+                break;
+            case "4":
+                key += "4";
+                break;
+            case "5":
+                key += "5";
+                break;
+            case "6":
+                key += "6";
+                break;
+            case "7":
+                key += "7";
+                break;
+            case "8":
+                key += "8";
+                break;
+            case "9":
+                key += "9";
+                break;
+            case "+":
+                key += "+";
+                break;
+            case "-":
+                key += "-";
+                break;
+            case "*":
+                key += "*";
+                break;
+            case "/":
+                key += "/";
+                break;
+            case "=":
+                key += "=";
+                break;
+            case ".":
+                key += ".";
+                break;
+            case ",":
+                key += ",";
+                break;
+            case ";":
+                key += ";";
+                break;
+            case "'":
+                key += "'";
+                break;
+            case "[":
+                key += "[";
+                break;
+            case "]":
+                key += "]";
+                break;
+            default: return;
+        }
+        this.lastKey = key;
+        this.buffer.push(key);
+    }
+}
+exports.KeyboardInput = KeyboardInput;
+
+},{}],19:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.CallStack = void 0;
 class CallStack {
     constructor() {
@@ -780,7 +1048,7 @@ class CallStack {
 }
 exports.CallStack = CallStack;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Commands = void 0;
@@ -826,8 +1094,8 @@ class Commands {
             ["TROFF"]: this.TROFF,
             ["PRINT"]: this.PRINT,
             ["PRINTL"]: this.PRINTL,
-            ["PRINT.RAW"]: this.PRINT_RAW,
-            ["PRINTL.RAW"]: this.PRINTL_RAW,
+            ["RPRINT"]: this.RPRINT,
+            ["RPRINTL"]: this.RPRINTL,
             ["PRINT.ADD"]: this.PRINT_ADD,
             ["FCOL"]: this.FCOL,
             ["BCOL"]: this.BCOL,
@@ -843,7 +1111,9 @@ class Commands {
             ["IF.GTE"]: this.IF_GTE,
             ["IF.LT"]: this.IF_LT,
             ["IF.LTE"]: this.IF_LTE,
-            ["ENDIF"]: this.ENDIF
+            ["ENDIF"]: this.ENDIF,
+            ["INKEY"]: this.INKEY,
+            ["CYCLES"]: this.CYCLES
         };
     }
     execute(programLine) {
@@ -882,7 +1152,7 @@ class Commands {
     }
     EXIT(ptm, intp) {
         intp.argc(0);
-        ptm.stop("Exit requested");
+        ptm.stop("EXIT command");
         if (ptm.display) {
             ptm.display.update();
         }
@@ -993,6 +1263,10 @@ class Commands {
         intp.argc(0);
         if (ptm.display) {
             ptm.display.clearAllBuffers();
+            if (ptm.cursor) {
+                ptm.cursor.layer = 0;
+                ptm.cursor.setPos(0, 0);
+            }
         }
     }
     WCOL(ptm, intp) {
@@ -1107,7 +1381,7 @@ class Commands {
         const text = argc > 0 ? intp.requireString(0) : "";
         ptm.printFmtTileStringAtCursorPos(text + "{LF}");
     }
-    PRINT_RAW(ptm, intp) {
+    RPRINT(ptm, intp) {
         intp.argc(1);
         const text = intp.requireString(0);
         ptm.printRawTileStringAtCursorPos(text);
@@ -1120,7 +1394,7 @@ class Commands {
             ptm.cursor.x += text.length;
         }
     }
-    PRINTL_RAW(ptm, intp) {
+    RPRINTL(ptm, intp) {
         intp.argc(1);
         const text = intp.requireString(0);
         ptm.printRawTileStringAtCursorPos(text + "\n");
@@ -1208,10 +1482,21 @@ class Commands {
     ENDIF(ptm, intp) {
         intp.argc(0);
     }
+    INKEY(ptm, intp) {
+        intp.argc(1);
+        const varId = intp.requireId(0);
+        const key = ptm.keyboard.getKey();
+        ptm.vars[varId] = key;
+    }
+    CYCLES(ptm, intp) {
+        intp.argc(1);
+        const varId = intp.requireId(0);
+        ptm.vars[varId] = ptm.cycleCounter.toString();
+    }
 }
 exports.Commands = Commands;
 
-},{"../Errors/PTM_RuntimeError":3,"./Comparison":20}],20:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"./Comparison":21}],21:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Comparison = void 0;
@@ -1225,7 +1510,7 @@ var Comparison;
     Comparison[Comparison["LesserOrEqual"] = 5] = "LesserOrEqual";
 })(Comparison = exports.Comparison || (exports.Comparison = {}));
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FmtStringPrinter = void 0;
@@ -1403,7 +1688,7 @@ class FmtStringPrinter {
 }
 exports.FmtStringPrinter = FmtStringPrinter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Graphics/TileSeq":15,"./Interpreter":23}],22:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Graphics/TileSeq":15,"./Interpreter":24}],23:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.IfStack = void 0;
@@ -1426,7 +1711,7 @@ class IfStack {
 }
 exports.IfStack = IfStack;
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Interpreter = void 0;
@@ -1651,7 +1936,7 @@ class Interpreter {
 }
 exports.Interpreter = Interpreter;
 
-},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":30}],24:[function(require,module,exports){
+},{"../Errors/PTM_RuntimeError":3,"../Parser/ParamType":31}],25:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Logger = void 0;
@@ -1689,7 +1974,7 @@ class Logger {
 }
 exports.Logger = Logger;
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LoopStack = exports.Loop = void 0;
@@ -1734,7 +2019,7 @@ class LoopStack {
 }
 exports.LoopStack = LoopStack;
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM = void 0;
@@ -1757,15 +2042,17 @@ const Comparison_1 = require("./Interpreter/Comparison");
 const ProgramLineType_1 = require("./Parser/ProgramLineType");
 const IfStack_1 = require("./Interpreter/IfStack");
 const FmtStringPrinter_1 = require("./Interpreter/FmtStringPrinter");
+const KeyboardInput_1 = require("./Input/KeyboardInput");
 document.addEventListener("DOMContentLoaded", main_1.PTM_Main);
 class PTM {
     constructor(displayElement, srcPtml) {
-        this.cycleInterval = 1;
         this.animationInterval = 400;
         // Initialize objects
         this.displayElement = displayElement;
         this.display = null;
         this.log = new Logger_1.Logger();
+        this.stopRequested = false;
+        this.cycleCounter = 0;
         this.parser = new Parser_1.Parser(this, srcPtml);
         this.program = this.parser.parse();
         this.intp = new Interpreter_1.Interpreter(this, this.program);
@@ -1786,6 +2073,7 @@ class PTM {
         this.currentTextFgc = 1;
         this.currentTextBgc = 0;
         this.stringFmt = new FmtStringPrinter_1.FmtStringPrinter(this);
+        this.keyboard = new KeyboardInput_1.KeyboardInput(this);
         // Configure defaults
         DefaultPalette_1.DefaultPalette.init(this.palette);
         DefaultTileset_1.DefaultTileset.init(this.tileset);
@@ -1793,8 +2081,8 @@ class PTM {
         this.cycleExecHandle = this.start();
     }
     start() {
-        this.log.info("Interpreter started");
-        return window.setInterval(() => this.cycle(), this.cycleInterval);
+        this.log.info("Machine running...");
+        return window.requestAnimationFrame(() => this.cycle());
     }
     cycle() {
         if (this.pauseCycles > 0) {
@@ -1821,18 +2109,38 @@ class PTM {
                 }
             }
         }
+        this.cycleCounter++;
+        if (this.cycleCounter >= Number.MAX_SAFE_INTEGER) {
+            this.cycleCounter = 0;
+        }
+        if (!this.stopRequested) {
+            window.requestAnimationFrame(() => this.cycle());
+        }
     }
     stop(reason) {
-        window.clearInterval(this.cycleExecHandle);
-        let msg = "Interpreter exited";
+        this.stopRequested = true;
+        window.cancelAnimationFrame(this.cycleExecHandle);
+        this.keepVsyncAfterStopping();
+        let msg = "Machine stopped\nReason: ";
         if (reason) {
-            msg += `\nReason: ${reason}`;
+            msg += reason;
+        }
+        else {
+            msg += "Manual stop request";
         }
         console.log(msg);
+    }
+    keepVsyncAfterStopping() {
+        if (this.display) {
+            this.display.update();
+        }
+        window.requestAnimationFrame(() => this.keepVsyncAfterStopping());
     }
     reset() {
         var _a;
         this.log.info("Machine reset");
+        this.stopRequested = false;
+        this.cycleCounter = 0;
         this.programPtr = 0;
         this.branching = true;
         (_a = this.display) === null || _a === void 0 ? void 0 : _a.reset();
@@ -2002,14 +2310,14 @@ class PTM {
             }
         }
         else {
-            const aNumeric = Number(a);
-            if (Number.isNaN(aNumeric))
+            const numA = Number(a);
+            if (Number.isNaN(numA))
                 return;
-            const bNumeric = Number(b);
-            if (Number.isNaN(bNumeric))
+            const numB = Number(b);
+            if (Number.isNaN(numB))
                 return;
             if (cmp === Comparison_1.Comparison.Greater) {
-                if (a > b) {
+                if (numA > numB) {
                     return;
                 }
                 else {
@@ -2017,7 +2325,7 @@ class PTM {
                 }
             }
             else if (cmp === Comparison_1.Comparison.GreaterOrEqual) {
-                if (a >= b) {
+                if (numA >= numB) {
                     return;
                 }
                 else {
@@ -2025,7 +2333,7 @@ class PTM {
                 }
             }
             else if (cmp === Comparison_1.Comparison.Lesser) {
-                if (a < b) {
+                if (numA < numB) {
                     return;
                 }
                 else {
@@ -2033,7 +2341,7 @@ class PTM {
                 }
             }
             else if (cmp === Comparison_1.Comparison.LesserOrEqual) {
-                if (a <= b) {
+                if (numA <= numB) {
                     return;
                 }
                 else {
@@ -2069,7 +2377,7 @@ class PTM {
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultPalette":6,"./Graphics/DefaultTileset":7,"./Graphics/Display":8,"./Graphics/Palette":10,"./Graphics/TileSeq":15,"./Graphics/Tileset":16,"./Interpreter/CallStack":18,"./Interpreter/Commands":19,"./Interpreter/Comparison":20,"./Interpreter/FmtStringPrinter":21,"./Interpreter/IfStack":22,"./Interpreter/Interpreter":23,"./Interpreter/Logger":24,"./Interpreter/LoopStack":25,"./Parser/Parser":31,"./Parser/ProgramLineType":34,"./main":35}],27:[function(require,module,exports){
+},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultPalette":6,"./Graphics/DefaultTileset":7,"./Graphics/Display":8,"./Graphics/Palette":10,"./Graphics/TileSeq":15,"./Graphics/Tileset":16,"./Input/KeyboardInput":18,"./Interpreter/CallStack":19,"./Interpreter/Commands":20,"./Interpreter/Comparison":21,"./Interpreter/FmtStringPrinter":22,"./Interpreter/IfStack":23,"./Interpreter/Interpreter":24,"./Interpreter/Logger":25,"./Interpreter/LoopStack":26,"./Parser/Parser":32,"./Parser/ProgramLineType":35,"./main":36}],28:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -2080,7 +2388,7 @@ var ExecutionTime;
     ExecutionTime["RunTime"] = "RunTime";
 })(ExecutionTime = exports.ExecutionTime || (exports.ExecutionTime = {}));
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NumberBase = void 0;
@@ -2092,7 +2400,7 @@ var NumberBase;
     NumberBase["Binary"] = "Binary";
 })(NumberBase = exports.NumberBase || (exports.NumberBase = {}));
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Param = void 0;
@@ -2231,7 +2539,7 @@ Param.BinPrefix = "&B";
 Param.ArrayLeftBrace = "[";
 Param.ArrayRightBrace = "]";
 
-},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":23,"./NumberBase":28,"./ParamType":30}],30:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"../Interpreter/Interpreter":24,"./NumberBase":29,"./ParamType":31}],31:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParamType = void 0;
@@ -2245,7 +2553,7 @@ var ParamType;
     ParamType["ArrayIxVarIdentifier"] = "ArrayIxVarIdentifier";
 })(ParamType = exports.ParamType || (exports.ParamType = {}));
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Parser = void 0;
@@ -2287,8 +2595,13 @@ class Parser {
                 }
             }
             else if (newPrgLine.type === ProgramLineType_1.ProgramLineType.Label) {
-                const label = newPrgLine.src;
-                this.program.addLabel(label, actualLineIndex);
+                const newLabel = newPrgLine.src;
+                for (let existingLabel in this.program.labels) {
+                    if (newLabel === existingLabel) {
+                        throw new PTM_ParseError_1.PTM_ParseError(`Duplicate label: ${newLabel}`, newPrgLine);
+                    }
+                }
+                this.program.addLabel(newLabel, actualLineIndex);
             }
             else if (newPrgLine.type === ProgramLineType_1.ProgramLineType.Undefined) {
                 throw new PTM_ParseError_1.PTM_ParseError("Could not determine type of this line", newPrgLine);
@@ -2400,7 +2713,7 @@ class Parser {
 }
 exports.Parser = Parser;
 
-},{"../Errors/PTM_ParseError":2,"./ExecutionTime":27,"./Param":29,"./Program":32,"./ProgramLine":33,"./ProgramLineType":34}],32:[function(require,module,exports){
+},{"../Errors/PTM_ParseError":2,"./ExecutionTime":28,"./Param":30,"./Program":33,"./ProgramLine":34,"./ProgramLineType":35}],33:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Program = void 0;
@@ -2421,7 +2734,7 @@ class Program {
 }
 exports.Program = Program;
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLine = void 0;
@@ -2442,7 +2755,7 @@ class ProgramLine {
 }
 exports.ProgramLine = ProgramLine;
 
-},{"./ExecutionTime":27,"./ProgramLineType":34}],34:[function(require,module,exports){
+},{"./ExecutionTime":28,"./ProgramLineType":35}],35:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProgramLineType = void 0;
@@ -2457,7 +2770,7 @@ var ProgramLineType;
     ProgramLineType["EndFor"] = "EndFor";
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM_Main = void 0;
@@ -2506,4 +2819,4 @@ function PTM_Main() {
 }
 exports.PTM_Main = PTM_Main;
 
-},{"./Errors/PTM_InitializationError":1,"./PTM":26}]},{},[26]);
+},{"./Errors/PTM_InitializationError":1,"./PTM":27}]},{},[27]);
