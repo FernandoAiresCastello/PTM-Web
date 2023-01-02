@@ -1,4 +1,5 @@
-import { DisplayBase } from "./DisplayBase";
+import { Perfmon } from "../Util/Perfmon";
+import { DisplayRenderer } from "./DisplayRenderer";
 import { Palette } from "./Palette";
 import { Tile } from "./Tile";
 import { TileBuffer } from "./TileBuffer";
@@ -8,7 +9,7 @@ import { Viewport } from "./Viewport";
 
 export class Display {
 
-    private readonly base: DisplayBase;
+    private readonly renderer: DisplayRenderer;
     private buffers: TileBuffer[];
     private animationFrameIndex: number = 0;
 
@@ -19,7 +20,7 @@ export class Display {
         palette: Palette, tileset: Tileset,
         animationInterval: number) {
 
-        this.base = new DisplayBase(displayElement, width, height, hStretch, vStretch, palette, tileset);
+        this.renderer = new DisplayRenderer(displayElement, width, height, hStretch, vStretch, palette, tileset);
         this.buffers = [];
         this.createDefaultBuffer(defaultBufLayers);
 
@@ -27,7 +28,7 @@ export class Display {
     }
 
     private createDefaultBuffer(defaultBufLayers: number) {
-        this.createNewBuffer("default", defaultBufLayers, this.base.cols, this.base.rows, 0, 0);
+        this.createNewBuffer("default", defaultBufLayers, this.renderer.cols, this.renderer.rows, 0, 0);
     }
 
     getDefaultBuffer(): TileBuffer {
@@ -48,13 +49,13 @@ export class Display {
 
     reset() {
         const defaultBufLayers = this.getDefaultBuffer().layerCount;
-        this.base.reset();
+        this.renderer.reset();
         this.deleteAllBuffers();
         this.createDefaultBuffer(defaultBufLayers);
     }
 
     setBackColorIx(ix: number) {
-        this.base.backColorIx = ix;
+        this.renderer.backColorIx = ix;
     }
 
     clearAllBuffers() {
@@ -64,9 +65,9 @@ export class Display {
     }
     
     update() {
-        this.base.clearToBackColor();
+        this.renderer.clearToBackColor();
         this.drawVisibleBuffers();
-        this.base.update();
+        this.renderer.update();
     }
 
     getBuffer(id: string): TileBuffer | null {
@@ -90,7 +91,7 @@ export class Display {
     }
 
     drawTileFrame(tile: Tile, x: number, y: number, transparent: boolean) {
-        this.base.drawTileFrame(tile, x, y, transparent);
+        this.renderer.drawTileFrame(tile, x, y, transparent);
     }
 
     private drawVisibleBuffers() {
@@ -119,7 +120,7 @@ export class Display {
         for (let tileY = bufY; tileY < bufY + h; tileY++) {
             for (let tileX = bufX; tileX < bufX + w; tileX++) {
                 if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height && 
-                    dispX >= 0 && dispY >= 0 && dispX < this.base.cols && dispY < this.base.rows) {
+                    dispX >= 0 && dispY >= 0 && dispX < this.renderer.cols && dispY < this.renderer.rows) {
                     const tileSeq = layer.getTileRef(tileX, tileY);
                     if (!tileSeq.isEmpty()) {
                         const tile = tileSeq.frames[this.animationFrameIndex % tileSeq.frames.length];

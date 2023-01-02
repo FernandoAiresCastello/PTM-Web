@@ -1,4 +1,5 @@
 import { PTM_InitializationError } from "../Errors/PTM_InitializationError";
+import { Perfmon } from "../Util/Perfmon";
 import { CanvasPoint } from "./CanvasPoint";
 import { ColorString, PaletteIndex } from "./ColorTypes";
 import { Palette } from "./Palette";
@@ -6,13 +7,13 @@ import { PixelBlock } from "./PixelBlock";
 import { Tile } from "./Tile";
 import { Tileset } from "./Tileset";
 
-export class DisplayBase {
+export class DisplayRenderer {
 
-    readonly palette: Palette;
-    readonly tileset: Tileset;
     backColorIx: PaletteIndex = 0;
     readonly cols: number;
     readonly rows: number;
+    private readonly palette: Palette;
+    private readonly tileset: Tileset;
 
     private canvasElement: HTMLCanvasElement;
     private canvas: CanvasRenderingContext2D;

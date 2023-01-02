@@ -130,10 +130,10 @@ export class PTM {
     stop(reason?: string) {
         this.stopRequested = true;
         window.cancelAnimationFrame(this.cycleExecHandle);
-        this.keepVsyncAfterStopping();
 
         let msg = "Machine stopped\nReason: ";
         if (reason) {
+            this.keepVsyncAfterStopping();
             msg += reason;
         } else {
             msg += "Manual stop request";

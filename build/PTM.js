@@ -207,18 +207,18 @@ exports.DefaultTileset = DefaultTileset;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Display = void 0;
-const DisplayBase_1 = require("./DisplayBase");
+const DisplayRenderer_1 = require("./DisplayRenderer");
 const TileBuffer_1 = require("./TileBuffer");
 class Display {
     constructor(displayElement, width, height, hStretch, vStretch, defaultBufLayers, palette, tileset, animationInterval) {
         this.animationFrameIndex = 0;
-        this.base = new DisplayBase_1.DisplayBase(displayElement, width, height, hStretch, vStretch, palette, tileset);
+        this.renderer = new DisplayRenderer_1.DisplayRenderer(displayElement, width, height, hStretch, vStretch, palette, tileset);
         this.buffers = [];
         this.createDefaultBuffer(defaultBufLayers);
         window.setInterval(this.advanceTileAnimation, animationInterval, this);
     }
     createDefaultBuffer(defaultBufLayers) {
-        this.createNewBuffer("default", defaultBufLayers, this.base.cols, this.base.rows, 0, 0);
+        this.createNewBuffer("default", defaultBufLayers, this.renderer.cols, this.renderer.rows, 0, 0);
     }
     getDefaultBuffer() {
         return this.getBuffer("default");
@@ -235,12 +235,12 @@ class Display {
     }
     reset() {
         const defaultBufLayers = this.getDefaultBuffer().layerCount;
-        this.base.reset();
+        this.renderer.reset();
         this.deleteAllBuffers();
         this.createDefaultBuffer(defaultBufLayers);
     }
     setBackColorIx(ix) {
-        this.base.backColorIx = ix;
+        this.renderer.backColorIx = ix;
     }
     clearAllBuffers() {
         for (let i = 0; i < this.buffers.length; i++) {
@@ -248,9 +248,9 @@ class Display {
         }
     }
     update() {
-        this.base.clearToBackColor();
+        this.renderer.clearToBackColor();
         this.drawVisibleBuffers();
-        this.base.update();
+        this.renderer.update();
     }
     getBuffer(id) {
         for (let i = 0; i < this.buffers.length; i++) {
@@ -271,7 +271,7 @@ class Display {
         }
     }
     drawTileFrame(tile, x, y, transparent) {
-        this.base.drawTileFrame(tile, x, y, transparent);
+        this.renderer.drawTileFrame(tile, x, y, transparent);
     }
     drawVisibleBuffers() {
         for (let i = 0; i < this.buffers.length; i++) {
@@ -297,7 +297,7 @@ class Display {
         for (let tileY = bufY; tileY < bufY + h; tileY++) {
             for (let tileX = bufX; tileX < bufX + w; tileX++) {
                 if (tileX >= 0 && tileY >= 0 && tileX < layer.width && tileY < layer.height &&
-                    dispX >= 0 && dispY >= 0 && dispX < this.base.cols && dispY < this.base.rows) {
+                    dispX >= 0 && dispY >= 0 && dispX < this.renderer.cols && dispY < this.renderer.rows) {
                     const tileSeq = layer.getTileRef(tileX, tileY);
                     if (!tileSeq.isEmpty()) {
                         const tile = tileSeq.frames[this.animationFrameIndex % tileSeq.frames.length];
@@ -313,14 +313,14 @@ class Display {
 }
 exports.Display = Display;
 
-},{"./DisplayBase":9,"./TileBuffer":13}],9:[function(require,module,exports){
+},{"./DisplayRenderer":9,"./TileBuffer":13}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DisplayBase = void 0;
+exports.DisplayRenderer = void 0;
 const PTM_InitializationError_1 = require("../Errors/PTM_InitializationError");
 const CanvasPoint_1 = require("./CanvasPoint");
 const PixelBlock_1 = require("./PixelBlock");
-class DisplayBase {
+class DisplayRenderer {
     constructor(parentElement, bufWidth, bufHeight, pixelWidth, pixelHeight, palette, tileset) {
         this.backColorIx = 0;
         this.pixelBufWidth = bufWidth;
@@ -417,7 +417,7 @@ class DisplayBase {
         return positions;
     }
 }
-exports.DisplayBase = DisplayBase;
+exports.DisplayRenderer = DisplayRenderer;
 
 },{"../Errors/PTM_InitializationError":1,"./CanvasPoint":4,"./PixelBlock":11}],10:[function(require,module,exports){
 "use strict";
@@ -1191,7 +1191,7 @@ class Commands {
     VAR(ptm, intp) {
         intp.argc(2);
         const id = intp.requireId(0);
-        ptm.vars[id] = intp.requireString(1);
+        ptm.setVar(id, intp.requireString(1));
     }
     ARR_NEW(ptm, intp) {
         const argc = intp.argcMinMax(1, 3);
@@ -1238,13 +1238,13 @@ class Commands {
         intp.argc(1);
         const varId = intp.requireExistingVariable(0);
         const value = intp.requireNumber(0);
-        ptm.vars[varId] = (value + 1).toString();
+        ptm.setVar(varId, value + 1);
     }
     DEC(ptm, intp) {
         intp.argc(1);
         const varId = intp.requireExistingVariable(0);
         const value = intp.requireNumber(0);
-        ptm.vars[varId] = (value - 1).toString();
+        ptm.setVar(varId, value - 1);
     }
     PAL(ptm, intp) {
         intp.argc(2);
@@ -1486,12 +1486,12 @@ class Commands {
         intp.argc(1);
         const varId = intp.requireId(0);
         const key = ptm.keyboard.getKey();
-        ptm.vars[varId] = key;
+        ptm.setVar(varId, key);
     }
     CYCLES(ptm, intp) {
         intp.argc(1);
         const varId = intp.requireId(0);
-        ptm.vars[varId] = ptm.cycleCounter.toString();
+        ptm.setVar(varId, ptm.cycleCounter);
     }
 }
 exports.Commands = Commands;
@@ -2120,9 +2120,9 @@ class PTM {
     stop(reason) {
         this.stopRequested = true;
         window.cancelAnimationFrame(this.cycleExecHandle);
-        this.keepVsyncAfterStopping();
         let msg = "Machine stopped\nReason: ";
         if (reason) {
+            this.keepVsyncAfterStopping();
             msg += reason;
         }
         else {
@@ -2187,6 +2187,9 @@ class PTM {
         else {
             throw new PTM_RuntimeError_1.PTM_RuntimeError("Call stack is empty", this.currentLine);
         }
+    }
+    setVar(id, value) {
+        this.vars[id] = value.toString();
     }
     pause(cycles) {
         this.pauseCycles = cycles;
