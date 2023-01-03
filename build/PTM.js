@@ -1122,8 +1122,8 @@ class Commands {
             this.ptm.log.printCommandExecution(programLine);
             this.intp.programLine = programLine;
             const commandFunction = this.commandList[cmd];
-            if (commandFunction) {
-                commandFunction(this.ptm, this.intp);
+            if (commandFunction !== undefined) {
+                commandFunction.call(this, this.ptm, this.intp);
             }
             else {
                 throw new PTM_RuntimeError_1.PTM_RuntimeError(`Unknown command: ${cmd}`, programLine);
@@ -2043,6 +2043,7 @@ const ProgramLineType_1 = require("./Parser/ProgramLineType");
 const IfStack_1 = require("./Interpreter/IfStack");
 const FmtStringPrinter_1 = require("./Interpreter/FmtStringPrinter");
 const KeyboardInput_1 = require("./Input/KeyboardInput");
+const Perfmon_1 = require("./Util/Perfmon");
 document.addEventListener("DOMContentLoaded", main_1.PTM_Main);
 class PTM {
     constructor(displayElement, srcPtml) {
@@ -2085,6 +2086,7 @@ class PTM {
         return window.requestAnimationFrame(() => this.cycle());
     }
     cycle() {
+        const perfmon = new Perfmon_1.Perfmon();
         if (this.pauseCycles > 0) {
             this.pauseCycles--;
         }
@@ -2113,6 +2115,7 @@ class PTM {
         if (this.cycleCounter >= Number.MAX_SAFE_INTEGER) {
             this.cycleCounter = 0;
         }
+        perfmon.stopThenPrint();
         if (!this.stopRequested) {
             window.requestAnimationFrame(() => this.cycle());
         }
@@ -2380,7 +2383,7 @@ class PTM {
 }
 exports.PTM = PTM;
 
-},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultPalette":6,"./Graphics/DefaultTileset":7,"./Graphics/Display":8,"./Graphics/Palette":10,"./Graphics/TileSeq":15,"./Graphics/Tileset":16,"./Input/KeyboardInput":18,"./Interpreter/CallStack":19,"./Interpreter/Commands":20,"./Interpreter/Comparison":21,"./Interpreter/FmtStringPrinter":22,"./Interpreter/IfStack":23,"./Interpreter/Interpreter":24,"./Interpreter/Logger":25,"./Interpreter/LoopStack":26,"./Parser/Parser":32,"./Parser/ProgramLineType":35,"./main":36}],28:[function(require,module,exports){
+},{"./Errors/PTM_RuntimeError":3,"./Graphics/Cursor":5,"./Graphics/DefaultPalette":6,"./Graphics/DefaultTileset":7,"./Graphics/Display":8,"./Graphics/Palette":10,"./Graphics/TileSeq":15,"./Graphics/Tileset":16,"./Input/KeyboardInput":18,"./Interpreter/CallStack":19,"./Interpreter/Commands":20,"./Interpreter/Comparison":21,"./Interpreter/FmtStringPrinter":22,"./Interpreter/IfStack":23,"./Interpreter/Interpreter":24,"./Interpreter/Logger":25,"./Interpreter/LoopStack":26,"./Parser/Parser":32,"./Parser/ProgramLineType":35,"./Util/Perfmon":36,"./main":37}],28:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ExecutionTime = void 0;
@@ -2774,6 +2777,37 @@ var ProgramLineType;
 })(ProgramLineType = exports.ProgramLineType || (exports.ProgramLineType = {}));
 
 },{}],36:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Perfmon = void 0;
+class Perfmon {
+    constructor() {
+        this.startTimeMs = 0;
+        this.endTimeMs = 0;
+        this.timeDiffMs = 0;
+        this.start();
+    }
+    start() {
+        this.startTimeMs = performance.now();
+        return this.startTimeMs;
+    }
+    stop() {
+        this.endTimeMs = performance.now();
+        this.timeDiffMs = this.endTimeMs - this.startTimeMs;
+        return this.timeDiffMs;
+    }
+    stopThenPrint() {
+        const msTimeSpent = this.stop();
+        const lastMsTimeSpent = window.PTM_PerfmonMs;
+        if (lastMsTimeSpent === undefined || msTimeSpent > lastMsTimeSpent) {
+            window.PTM_PerfmonMs = msTimeSpent;
+            console.log("Cycle max time ms: " + msTimeSpent);
+        }
+    }
+}
+exports.Perfmon = Perfmon;
+
+},{}],37:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PTM_Main = void 0;

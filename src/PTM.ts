@@ -22,6 +22,7 @@ import { ProgramLineType } from "./Parser/ProgramLineType";
 import { IfStack } from "./Interpreter/IfStack";
 import { FmtStringPrinter } from "./Interpreter/FmtStringPrinter";
 import { KeyboardInput } from "./Input/KeyboardInput";
+import { Perfmon } from "./Util/Perfmon";
 
 document.addEventListener("DOMContentLoaded", PTM_Main);
 
@@ -98,6 +99,8 @@ export class PTM {
     }
 
     cycle() {
+        const perfmon = new Perfmon();
+        
         if (this.pauseCycles > 0) {
             this.pauseCycles--;
         } else {
@@ -122,6 +125,9 @@ export class PTM {
         if (this.cycleCounter >= Number.MAX_SAFE_INTEGER) {
             this.cycleCounter = 0;
         }
+        
+        perfmon.stopThenPrint();
+
         if (!this.stopRequested) {
             window.requestAnimationFrame(() => this.cycle());
         }

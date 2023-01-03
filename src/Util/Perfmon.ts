@@ -13,9 +13,18 @@ export class Perfmon {
         return this.startTimeMs;
     }
 
-    end(): number {
+    stop(): number {
         this.endTimeMs = performance.now();
         this.timeDiffMs = this.endTimeMs - this.startTimeMs;
         return this.timeDiffMs;
+    }
+
+    stopThenPrint() {
+        const msTimeSpent = this.stop();
+        const lastMsTimeSpent = (window as any).PTM_PerfmonMs;
+        if (lastMsTimeSpent === undefined || msTimeSpent > lastMsTimeSpent) {
+            (window as any).PTM_PerfmonMs = msTimeSpent;
+            console.log("Cycle max time ms: " + msTimeSpent);
+        }
     }
 }

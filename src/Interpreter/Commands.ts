@@ -81,8 +81,8 @@ export class Commands {
             this.ptm.log.printCommandExecution(programLine);
             this.intp.programLine = programLine;
             const commandFunction = this.commandList[cmd];
-            if (commandFunction) {
-                commandFunction(this.ptm, this.intp);
+            if (commandFunction !== undefined) {
+                commandFunction.call(this, this.ptm, this.intp);
             } else {
                 throw new PTM_RuntimeError(`Unknown command: ${cmd}`, programLine);
             }
